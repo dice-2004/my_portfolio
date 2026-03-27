@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui;
+
+  --color-lime-green: #9CE114;
+  --color-acid-yellow: #D9FF00;
+  --color-tech-black: #07080a;
+  --color-pane-gray: #0c0d12;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-spin-slow: spin 12s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+}
+
+:root {
+  --background: #07080a;
+  --foreground: #ffffff;
+}
+
+body {
+  background-color: var(--color-tech-black);
+  color: white;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+}
+
+/* Technical Texture Layers */
+.noise-bg {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Cfilter id='noiseFilter'%3%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3%3C/filter%3%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3%3C/svg%3e");
+}
+
+.tech-grid {
+  background-image: 
+    linear-gradient(rgba(156, 225, 20, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 225, 20, 0.05) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* High Precision Grid for Works */
+.grid-bg {
+  background-color: rgba(255, 255, 255, 0.05);
+  display: grid;
+  gap: 1px;
+}
+
+/* Custom Selection */
+::selection {
+  background: var(--color-lime-green);
+  color: black;
+}
+
+/* Typography Scale & Weight */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.05em;
+  font-weight: 900;
+}
+
+/* Scroll Customization */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-tech-black);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 225, 20, 0.2);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-lime-green);
+}
+
+/* Layout Utilities */
+.pane-shadow {
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+}

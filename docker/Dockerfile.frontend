@@ -1,0 +1,5 @@
+FROM node:25-bookworm-slim
+
+WORKDIR /app
+
+CMD ["npm", "run", "dev"]

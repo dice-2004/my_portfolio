@@ -1,0 +1,29 @@
+name: Daily SQLite Backup
+
+on:
+  schedule:
+    - cron: '0 19 * * *' # 日本時間の午前4時（UTCの19時）に自動実行
+  workflow_dispatch: # 手動実行用ボタンも有効化
+
+jobs:
+  backup:
+    # Phase 6でN100にSelf-hosted runnerを入れるため、ローカルマシン上で実行する設定
+    runs-on: self-hosted 
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Backup Copy
+        run: |
+          mkdir -p backups
+          # SQLiteファイルを日付付きでコピー保存
+          cp data/portfolio.db backups/portfolio-$(date +'%Y%m%d').db
+
+      - name: Upload to Secure Storage (Cloudflare R2 / AWS S3)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+        run: |
+          echo "本来であればここで、S3互換ストレージなどにバックアップを飛ばします"
+          # aws s3 cp backups/portfolio-*.db s3://my-portfolio-backups/ --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
