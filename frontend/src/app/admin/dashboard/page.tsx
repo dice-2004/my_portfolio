@@ -33,16 +33,6 @@ export default function AdminDashboard() {
       },
     });
 
-  // --- 「門番を通れるか？」の確認テスト ---
-  const testPing = async () => {
-    const res = await authFetch("/api/admin/ping");
-    if (res.ok) {
-      const data = await res.json();
-      setPingResult(`✅ ${data.message}`);
-    } else {
-      setPingResult("❌ 認証失敗：トークンが期限切れの可能性があります");
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
@@ -67,25 +57,6 @@ export default function AdminDashboard() {
         ✅ JWT認証通過済み。このページはあなただけが見ることができます。
       </p>
 
-      {/* --- 門番テストカード --- */}
-      <section className="mb-12">
-        <div className="p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
-          <h2 className="text-xl font-bold mb-4">🔐 認証テスト（門番への疎通確認）</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            Go側の「JWTを持っている人だけが通れる特別なAPI（/api/admin/ping）」を叩いて、
-            ちゃんとJWT検証を通過できるか確認します。
-          </p>
-          <button
-            onClick={testPing}
-            className="px-6 py-2 bg-purple-600/50 hover:bg-purple-600/80 rounded-xl font-bold transition"
-          >
-            門番を通過してみる
-          </button>
-          {pingResult && (
-            <p className="mt-4 text-green-300 font-bold text-sm">{pingResult}</p>
-          )}
-        </div>
-      </section>
 
       {/* --- 今後の管理機能（Phase 4）のためのプレースホルダー --- */}
       <section>

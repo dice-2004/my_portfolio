@@ -25,8 +25,32 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "DICE. // Portfolio",
-  description: "Precision Engineering & Digital Aesthetics",
+  title: {
+    default: "DICE. // Portfolio - Digital Archive & Engineering",
+    template: "%s | DICE."
+  },
+  description: "Daisuke's digital portfolio showcasing technical minimalism, precision engineering, and high-performance web development.",
+  keywords: ["Portfolio", "Daisuke", "Full Stack Developer", "Software Engineer", "Go", "Next.js", "Design"],
+  authors: [{ name: "Daisuke" }],
+  creator: "Daisuke",
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    url: "https://portfolio.dice-ke.tech",
+    title: "DICE. // Portfolio",
+    description: "Digital Archive & High-Performance Engineering Portfolio",
+    siteName: "DICE. Portfolio",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DICE. // Portfolio",
+    description: "Digital Archive & High-Performance Engineering Portfolio",
+    creator: "@_dice_ke",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: "/dice.svg",
   },
