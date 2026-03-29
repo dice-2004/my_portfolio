@@ -58,6 +58,8 @@ body, html {
   pointer-events: none;
   animation: none !important;
   -webkit-animation: none !important;
+  will-change: transform;
+  transform: perspective(1000px) rotateX(70deg) translateY(0) translateZ(0);
 }
 
 /* High Precision Grid for Works */
@@ -102,6 +104,8 @@ h1, h2, h3, h4 {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  will-change: transform, backdrop-filter;
+  transform: translateZ(0);
 }
 .glass-panel::before {
   content: '';
@@ -126,6 +130,8 @@ h1, h2, h3, h4 {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   cursor: pointer;
+  will-change: transform, backdrop-filter;
+  transform: translateZ(0);
 }
 .glass-panel-interactive::before {
   content: '';
@@ -169,5 +175,13 @@ h1, h2, h3, h4 {
 }
 .animate-flicker {
   animation: flicker 0.15s infinite;
+}
+
+/* Performance Utilities */
+.will-change-transform {
+  will-change: transform;
+}
+.transform-gpu {
+  transform: translateZ(0);
 }
 

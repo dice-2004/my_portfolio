@@ -27,7 +27,9 @@ export default function Home() {
     const fetchData = async () => {
       const fetcher = async (path: string) => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/${path}`);
+          // Use the correct portfolio URL if running in production
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://portfolio.dice-ke.tech';
+          const res = await fetch(`${baseUrl}/api/${path}`);
           const json = await res.json();
           // Backend might return {error: "..."} on 500
           if (json && !Array.isArray(json) && typeof json === 'object' && 'error' in json) {
@@ -88,13 +90,13 @@ export default function Home() {
 
       {/* Deep Dark Glowing Orbs for Glass Dark Simulation */}
       <div 
-        className="fixed top-[10%] right-[5%] w-[50vw] h-[50vw] max-w-3xl max-h-3xl bg-blue-600/20 blur-[130px] rounded-full pointer-events-none z-[-1]"
+        className="fixed top-[10%] right-[5%] w-[50vw] h-[50vw] max-w-3xl max-h-3xl bg-blue-600/20 blur-[130px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu"
       />
       <div 
-        className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-4xl max-h-4xl bg-indigo-600/20 blur-[150px] rounded-full pointer-events-none z-[-1]"
+        className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-4xl max-h-4xl bg-indigo-600/20 blur-[150px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu"
       />
       <div 
-        className="fixed top-[40%] left-[30%] w-[30vw] h-[30vw] max-w-xl max-h-xl bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none z-[-1]"
+        className="fixed top-[40%] left-[30%] w-[30vw] h-[30vw] max-w-xl max-h-xl bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu"
       />
 
       {/* Frame Decorations */}
