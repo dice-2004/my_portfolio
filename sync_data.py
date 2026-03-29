@@ -9,16 +9,25 @@ data_md_path = "data.md"
 
 def parse_blashup(path):
     if not os.path.exists(path):
-        print(f"File not found: {path}")
+        print(f"❌ File not found: {path}")
         return []
     with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
     
     projects = []
+    # 複数行のタイトル（JPHACKS～ 改行 技育博...）に対応するため、正規表現を調整
     items = re.split(r'### \d+\. ', content)[1:]
-    for item in items:
+    
+    for i, item in enumerate(items):
         lines = item.strip().split('\n')
-        title = lines[0].split('（')[0].split(' (')[0].strip()
+        # 改行を含むタイトルを結合
+        title_lines = []
+        for line in lines:
+            if line.startswith('**【'): break
+            title_lines.append(line.strip())
+        
+        full_title = " ".join(title_lines)
+        clean_title = full_title.split('（')[0].split(' (')[0].strip()
         
         dev_period = re.search(r'\* \*\*開発時期:\*\* (.*)', item)
         team = re.search(r'\* \*\*体制:\*\* (.*)', item)
@@ -29,18 +38,19 @@ def parse_blashup(path):
         detail_text = detail_match.group(1).strip() if detail_match else ""
 
         projects.append({
-            "title": title,
+            "title": clean_title,
             "period": dev_period.group(1) if dev_period else "",
             "team": team.group(1) if team else "",
             "tech": tech.group(1) if tech else "",
             "intro": intro.group(1) if intro else "",
-            "detail_raw": detail_text
+            "detail_raw": detail_text,
+            "display_order": i
         })
     return projects
 
 def parse_data_md(path):
     if not os.path.exists(path):
-        print(f"File not found: {path}")
+        print(f"❌ File not found: {path}")
         return {}
     with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -49,6 +59,7 @@ def parse_data_md(path):
     items = re.split(r'## \d+\. ', content)[1:]
     for item in items:
         lines = item.strip().split('\n')
+        if not lines: continue
         title_raw = lines[0].strip()
         github = re.search(r'- \*\*GitHub\*\*: (.*)', item)
         award = re.search(r'- \*\*受賞\*\*: (.*)', item)
@@ -60,52 +71,93 @@ def parse_data_md(path):
     return projects
 
 def update_db():
+    print("🚀 Starting Data Synchronization...")
     blashup_projects = parse_blashup(blashup_path)
     old_data = parse_data_md(data_md_path)
     
-    if not os.path.exists(db_path):
-        print(f"DB not found: {db_path}")
-        return
+    target_db = db_path
+    if not os.path.exists(target_db):
+        # Fallback to local path if running from root without full subdir context
+        alt_db_path = "portfolio.db"
+        if os.path.exists(alt_db_path): 
+            target_db = alt_db_path
+        else:
+            print(f"❌ DB not found at {db_path} or {alt_db_path}")
+            return
 
-    conn = sqlite3.connect(db_path)
+    print(f"📂 using database: {target_db}")
+    conn = sqlite3.connect(target_db)
     cursor = conn.cursor()
     
-    # 1. Update About content (remove aaaa and use a professional intro)
-    new_about = """## クリエイティブとエンジニアリングの交差点
-プログラミングは、論理だけではなく、自分自身を表現するための「筆」のようなものだと考えています。
+    # 0. Migration Support: Ensure display_order exists
+    for table in ["works", "skills"]:
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "display_order" not in columns:
+            print(f"🛠️ Adding display_order to {table}...")
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN display_order INTEGER DEFAULT 0")
+        
+        # Works table extra columns
+        if table == "works":
+            for col in ["period", "team", "tech"]:
+                if col not in columns:
+                    print(f"🛠️ Adding {col} to works...")
+                    cursor.execute(f"ALTER TABLE works ADD COLUMN {col} TEXT")
 
-日々進化し続ける技術の海の中で、新しいツールを実験し、それを自分の血肉としながら、誰かの心に響くプロダクトを創り出すこと。それが私のエンジニアとしての原動力です。
-
-このアーカイブには、そんな試行錯誤の軌跡を記録しています。"""
-    cursor.execute("UPDATE about SET content = ? WHERE id = 1", (new_about,))
+    # 1. Update About (Only if empty or user wants reset)
+    cursor.execute("SELECT count(*) FROM about")
+    if cursor.fetchone()[0] == 0:
+        print("📝 Initializing About content...")
+        new_about = "Welcome to my portfolio archive."
+        cursor.execute("INSERT INTO about (content) VALUES (?)", (new_about,))
     
     # 2. Re-sync Works
+    print(f"📦 Found {len(blashup_projects)} projects. Syncing...")
     cursor.execute("DELETE FROM works")
+    
+    all_techs = set()
+
     for p in blashup_projects:
         match_key = p["title"].lower()
-        old_info = {"github": "", "award": ""}
-        for ok in old_data:
+        github = ""
+        award = ""
+        for ok, val in old_data.items():
             if match_key in ok or ok in match_key:
-                old_info = old_data[ok]
+                github = val["github"]
+                award = val["award"]
                 break
         
-        award_str = f"🏆 **AWARD:** {old_info['award']}\n\n" if old_info['award'] else ""
-        full_description = f"{award_str}"
-        full_description += f"### Spec Sheet\n"
-        full_description += f"- **Period:** {p['period']}\n"
-        full_description += f"- **Team:** {p['team']}\n"
-        full_description += f"- **Tech Stack:** {p['tech']}\n\n"
-        full_description += f"### Concept\n{p['intro']}\n\n"
-        full_description += f"### Laboratory Notes\n{p['detail_raw']}\n"
+        # Extract tech for Skills sync
+        if p["tech"]:
+            techs = [t.strip() for t in re.split(r'[,/]', p["tech"])]
+            all_techs.update(techs)
+
+        award_str = f"🏆 **AWARD:** {award}\n\n" if award else ""
+        full_description = f"{award_str}### Concept\n{p['intro']}\n\n### Laboratory Notes\n{p['detail_raw']}\n"
         
         cursor.execute("""
-            INSERT INTO works (title, description, image_url, github_url)
-            VALUES (?, ?, ?, ?)
-        """, (p["title"], full_description, "/no-image.png", old_info["github"]))
+            INSERT INTO works (title, description, image_url, github_url, period, team, tech, display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (p["title"], full_description, "/no-image.png", github, p["period"], p["team"], p["tech"], p["display_order"]))
     
+    # 3. Re-sync Skills based on extracted Tech
+    print(f"🔧 Extracted {len(all_techs)} unique technologies. Syncing Skills...")
+    # Keep existing proficiency if possible, otherwise 80
+    cursor.execute("SELECT name, proficiency FROM skills")
+    existing_skills = {row[0]: row[1] for row in cursor.fetchall()}
+    cursor.execute("DELETE FROM skills")
+    
+    for i, tech in enumerate(sorted(list(all_techs))):
+        prof = existing_skills.get(tech, 80)
+        cat = "Language" if tech in ["Python", "Go", "TypeScript", "C", "C++", "Java"] else "Tool"
+        cursor.execute("""
+            INSERT INTO skills (name, category, proficiency, display_order)
+            VALUES (?, ?, ?, ?)
+        """, (tech, cat, prof, i))
+
     conn.commit()
     conn.close()
-    print(f"Synced {len(blashup_projects)} projects and updated About content.")
+    print("✅ Synchronization Complete.")
 
 if __name__ == "__main__":
     update_db()

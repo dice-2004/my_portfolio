@@ -6,7 +6,7 @@ import (
 
 func GetAllSkills() ([]model.Skill, error) {
 
-	query := "SELECT id,name,category,proficiency,created_at,updated_at FROM skills ORDER BY created_at DESC"
+	query := "SELECT id,name,category,proficiency,display_order,created_at,updated_at FROM skills ORDER BY display_order ASC, created_at DESC"
 
 	rows ,err := DB.Query(query)
 	if err != nil {
@@ -24,6 +24,7 @@ func GetAllSkills() ([]model.Skill, error) {
 			&s.Name,
 			&s.Category,
 			&s.Proficiency,
+			&s.DisplayOrder,
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
@@ -57,5 +58,9 @@ func UpdateSkill(id int64, name, category string, proficiency int) error {
 
 func DeleteSkill(id int64) error {
 	_, err := DB.Exec("DELETE FROM skills WHERE id=?", id)
+	return err
+}
+func UpdateSkillSortOrder(id int64, order int) error {
+	_, err := DB.Exec("UPDATE skills SET display_order=? WHERE id=?", order, id)
 	return err
 }

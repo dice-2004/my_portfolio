@@ -39,12 +39,12 @@ export default function DiceLogo() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.1 }}
-              className={displayText === "DICE" ? "text-white" : "text-lime-green italic font-bold"}
+              className={displayText === "DICE" ? "text-white" : "text-cyan-400 italic font-bold"}
             >
               {displayText}
             </motion.span>
          </AnimatePresence>
-         <span className="text-lime-green">.</span>
+         <span className="text-cyan-400 animate-pulse">_</span>
       </div>
 
       <div className="flex gap-2 items-center mt-1 opacity-20">

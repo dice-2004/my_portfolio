@@ -3,11 +3,12 @@
 
 ## 🏆 受賞・高評価プロダクト
 
-### 1. Oton-Zzz（JPHACKS サイバーエージェント賞受賞）
+### 1. Oton-Zzz（JPHACKS～
+技育博 サイバーエージェント賞受賞）
 **【概要ページ向け】**
 * **開発時期:** 2025年9月〜10月
 * **体制:** 5名チーム
-* **技術:** Python (MediaPipe, OpenCV), C++/Arduino (M5StickC Plus2)
+* **技術:** Python, MediaPipe, OpenCV, C++/Arduino (M5StickC Plus2)
 * **一言概要:** 家族の「テレビつけっぱなし問題」を解決する、ウェアラブル不要のAI睡眠検知IoTシステム。
 
 **【詳細ページ向け】**

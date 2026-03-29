@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
-import { ChevronLeft, Info, Globe, ShieldCheck, Hash, Calendar, Layers, Terminal } from 'lucide-react';
+import Typewriter from '@/components/Typewriter';
+import { ChevronLeft, Info, Globe, ShieldCheck, Hash, Calendar, Layers, Terminal, ExternalLink } from 'lucide-react';
 
 interface Work {
   id: number;
@@ -36,15 +37,15 @@ export default async function WorkDetailPage({ params }: { params: { id: string 
 
   if (!work) {
     return (
-      <div className="min-h-screen bg-[#07080a] flex items-center justify-center text-white">
-        <div className="text-center p-12 bg-[#0c0d12] rounded-3xl border border-white/10 relative overflow-hidden group">
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white font-mono">
+        <div className="text-center p-12 glass-panel rounded-3xl relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-8 opacity-[0.02] scale-150 rotate-12 pointer-events-none">
               <Hash size={160} />
            </div>
            <h1 className="text-6xl font-display font-black mb-4 tracking-tighter opacity-10">404</h1>
-           <p className="text-gray-500 mb-8 font-mono text-[10px] uppercase tracking-widest">Specimen_Not_Found</p>
-           <Link href="/works" className="text-lime-green hover:text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-2 transition-all">
-             <ChevronLeft className="w-4 h-4" /> Back to Archive
+           <p className="text-gray-500 mb-8 font-mono text-[10px] uppercase tracking-widest">&gt; Specimen_Not_Found</p>
+           <Link href="/works" className="text-cyan-400 hover:text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-2 transition-all">
+             <ChevronLeft className="w-4 h-4" /> [ Back to Archive ]
            </Link>
         </div>
       </div>
@@ -67,47 +68,47 @@ export default async function WorkDetailPage({ params }: { params: { id: string 
   const cleanDesc = work.description.replace(/🏆 \*\*AWARD:\*\* (.*)\n\n/, "");
 
   return (
-    <main className="min-h-screen bg-[#07080a] text-white selection:bg-lime-green selection:text-black relative pt-40 pb-64">
+    <main className="min-h-screen bg-[#020617] text-white selection:bg-cyan-500 selection:text-black relative pt-40 pb-64 font-mono">
       {/* Background System Layers */}
-      <div className="fixed inset-0 tech-grid opacity-[0.15] pointer-events-none" />
-      <div className="fixed inset-0 noise-bg opacity-5 pointer-events-none mix-blend-soft-light" />
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(156,225,20,0.05),transparent_60%)]" />
+      <div className="fixed inset-0 tech-grid-3d opacity-[0.15] pointer-events-none" />
+      <div className="fixed inset-0 noise-bg opacity-[0.02] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.03),transparent_60%)]" />
 
       <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 relative z-10">
         
         {/* Detail Header: Specimen Context */}
         <div className="mb-24 flex items-center gap-8 group">
            <Link href="/works" className="flex items-center gap-4 group/back">
-              <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center group-hover/back:border-lime-green group-hover/back:bg-lime-green/5 transition-all">
-                 <ChevronLeft className="w-5 h-5 group-hover/back:-translate-x-1 transition-transform" />
+              <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center group-hover/back:border-cyan-400 group-hover/back:bg-cyan-400/5 transition-all">
+                 <ChevronLeft className="w-5 h-5 group-hover/back:-translate-x-1 transition-transform text-white group-hover/back:text-cyan-400" />
               </div>
-              <span className="text-[10px] font-mono tracking-[0.2em] text-gray-500 group-hover/back:text-white transition-colors uppercase">Index_Collection</span>
+              <span className="text-[10px] font-mono tracking-[0.2em] text-gray-500 group-hover/back:text-white transition-colors uppercase">&gt; Index_Collection</span>
            </Link>
            <div className="h-[1px] flex-1 bg-white/5" />
-           <span className="text-[10px] font-mono tracking-[0.4em] text-lime-green uppercase">LOG_{id.padStart(3, '0')}</span>
+           <span className="text-[10px] font-mono tracking-[0.4em] text-cyan-400 uppercase">[ LOG_{id.padStart(3, '0')} ]</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
            
            {/* Left Module: Visual & Meta */}
            <div className="lg:col-span-8 flex flex-col gap-12">
-              <div className="bg-[#0c0d12] border border-white/10 p-10 md:p-14 rounded-3xl relative overflow-hidden">
+              <div className="glass-panel p-10 md:p-14 rounded-3xl relative overflow-hidden">
                  <div className="flex flex-col gap-8">
                     <div className="flex items-center gap-4">
-                       <Hash size={18} className="text-lime-green" />
-                       <h1 className="text-4xl md:text-6xl font-display font-black tracking-tight uppercase leading-none">
+                       <Hash size={18} className="text-cyan-400" />
+                       <h1 className="text-4xl md:text-6xl font-display font-black tracking-tight uppercase leading-none text-white">
                           {work.title}
                        </h1>
                     </div>
                     {award && (
-                       <div className="px-5 py-2 w-fit bg-lime-green/10 border border-lime-green/40 text-lime-green text-[10px] font-black tracking-widest uppercase rounded-full flex items-center gap-3">
-                          <span className="w-1.5 h-1.5 rounded-full bg-lime-green animate-pulse" />
+                       <div className="px-5 py-2 w-fit bg-cyan-400/10 border border-cyan-400/40 text-cyan-400 text-[10px] font-black tracking-widest uppercase rounded-full flex items-center gap-3">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                           {award}
                        </div>
                     )}
                     <div className="prose prose-invert prose-lg max-w-none 
-                       prose-h2:text-3xl prose-h2:font-display prose-h2:font-black prose-h2:tracking-tight prose-h2:mb-8 prose-h2:mt-16 first:prose-h2:mt-0
-                       prose-h3:text-lime-green prose-h3:text-[10px] prose-h3:uppercase prose-h3:tracking-[0.3em] prose-h3:font-black prose-h3:mb-6 prose-h3:border-l-2 prose-h3:border-lime-green prose-h3:pl-4
+                       prose-h2:text-3xl prose-h2:font-display prose-h2:font-black prose-h2:tracking-tight prose-h2:mb-8 prose-h2:mt-16 first:prose-h2:mt-0 prose-h2:text-white
+                       prose-h3:text-cyan-400 prose-h3:text-[10px] prose-h3:uppercase prose-h3:tracking-[0.3em] prose-h3:font-black prose-h3:mb-6 prose-h3:border-l-2 prose-h3:border-cyan-400 prose-h3:pl-4
                        prose-p:text-gray-400 prose-p:leading-[1.8] prose-p:text-sm
                        prose-li:text-gray-500 prose-li:text-xs">
                        <MarkdownRenderer content={cleanDesc} />
@@ -118,26 +119,26 @@ export default async function WorkDetailPage({ params }: { params: { id: string 
 
            {/* Right Module: Technical Specs Pane */}
            <div className="lg:col-span-4 flex flex-col gap-6 lg:sticky lg:top-32">
-              <div className="bg-[#0c0d12] border border-white/10 p-10 rounded-3xl relative overflow-hidden">
+              <div className="glass-panel p-10 rounded-3xl relative overflow-hidden">
                  <div className="mb-12">
-                    <h3 className="text-[10px] font-mono text-lime-green mb-10 tracking-[0.4em] uppercase underline decoration-lime-green/20 underline-offset-8">Spec_Sheet</h3>
+                    <h3 className="text-[10px] font-mono text-cyan-400 mb-10 tracking-[0.4em] uppercase underline decoration-cyan-400/20 underline-offset-8">Spec_Sheet</h3>
                     <div className="space-y-10">
                        <div className="group">
                           <div className="flex items-center gap-3 mb-3 text-gray-500">
                              <Calendar size={14} />
-                             <span className="text-[8px] font-mono uppercase tracking-widest">Timestamp</span>
+                             <span className="text-[8px] font-mono uppercase tracking-widest">&gt; Timestamp</span>
                           </div>
-                          <p className="font-display font-black text-2xl group-hover:text-lime-green transition-colors">{new Date(work.created_at).toLocaleDateString('ja-JP').split('/').join('.')}</p>
+                          <p className="font-display font-black text-2xl group-hover:text-cyan-400 transition-colors text-white">[{new Date(work.created_at).toLocaleDateString('ja-JP').split('/').join('.')}]</p>
                        </div>
 
                        <div className="group">
                           <div className="flex items-center gap-3 mb-3 text-gray-500">
                              <Globe size={14} />
-                             <span className="text-[8px] font-mono uppercase tracking-widest">Source_Code</span>
+                             <span className="text-[8px] font-mono uppercase tracking-widest">&gt; Source_Code</span>
                           </div>
                           {work.github_url ? (
                              <a href={work.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group/link">
-                                <span className="font-display font-black text-2xl text-lime-green group-hover/link:underline underline-offset-8 decoration-white">PUBLIC_REPO</span>
+                                <span className="font-display font-black text-2xl text-cyan-400 group-hover/link:underline underline-offset-8 decoration-white">PUBLIC_REPO</span>
                                 <ExternalLink size={16} className="text-white/20 group-hover/link:text-white transition-colors" />
                              </a>
                           ) : (
@@ -148,10 +149,10 @@ export default async function WorkDetailPage({ params }: { params: { id: string 
                        <div className="group">
                           <div className="flex items-center gap-3 mb-3 text-gray-500">
                              <ShieldCheck size={14} />
-                             <span className="text-[8px] font-mono uppercase tracking-widest">Protocol</span>
+                             <span className="text-[8px] font-mono uppercase tracking-widest">&gt; Protocol</span>
                           </div>
                           <p className="text-[10px] text-gray-500 leading-relaxed italic">
-                             この制作物は、開発環境における実証が完了したアーカイブ specimen です。
+                             Verified Archives
                           </p>
                        </div>
                     </div>
@@ -164,12 +165,12 @@ export default async function WorkDetailPage({ params }: { params: { id: string 
               </div>
 
               {/* Bottom CTA to Contact or Home */}
-              <Link href="/contact" className="bg-white text-black p-10 rounded-3xl flex items-center justify-between group hover:bg-lime-green transition-all duration-500">
+              <Link href="/contact" className="bg-white/5 border border-white/10 hover:border-cyan-400 text-white p-10 rounded-3xl flex items-center justify-between group hover:bg-cyan-400/5 transition-all duration-500">
                  <div>
-                    <h3 className="text-xl font-display font-black uppercase leading-none">Inquiry</h3>
-                    <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">この制作物について質問する</p>
+                    <h3 className="text-xl font-display font-black uppercase leading-none group-hover:text-cyan-400">&gt; Inquiry</h3>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-60">sys_req: protocol</p>
                  </div>
-                 <Terminal size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                 <Terminal size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:text-cyan-400 transition-all" />
               </Link>
            </div>
         </div>

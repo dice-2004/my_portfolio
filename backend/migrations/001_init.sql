@@ -4,22 +4,25 @@ CREATE TABLE IF NOT EXISTS works (
     description TEXT,
     image_url TEXT,
     github_url TEXT,
+    period TEXT,
+    team TEXT,
+    tech TEXT,
+    display_order INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT OR IGNORE INTO works (id, title, description, image_url, github_url) VALUES (1, 'Dice Portfolio', 'Next.js と Go で構築中のモダンなポートフォリオ', '/no-image.png', 'https://github.com/dice/portfolio');
 
 CREATE TABLE IF NOT EXISTS skills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     category TEXT NOT NULL,
     proficiency INTEGER NOT NULL,
+    display_order INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT OR IGNORE INTO skills (id, name, category, proficiency) VALUES (1, 'Go', 'Backend', 80);
 
 CREATE TABLE IF NOT EXISTS about (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +30,6 @@ CREATE TABLE IF NOT EXISTS about (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT OR IGNORE INTO about (id, content) VALUES (1, 'こんにちは、ダイスです。Next.jsとGoで構築中のモダンなポートフォリオです。');
 
 CREATE TABLE IF NOT EXISTS timeline (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +41,6 @@ CREATE TABLE IF NOT EXISTS timeline (
 
 );
 
-INSERT OR IGNORE INTO timeline (id, title, description, event_date, category, display_order) VALUES (1, 'Dice Portfolio', 'Next.js と Go で構築中のモダンなポートフォリオ', '2022-01-01', 'Work', 1);
 
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,

@@ -17,6 +17,9 @@ func CreateWork(c *gin.Context) {
 		Description string `json:"description" binding:"required"`
 		ImageURL    string `json:"image_url"`
 		GithubURL   string `json:"github_url"`
+		Period      string `json:"period"`
+		Team        string `json:"team"`
+		Tech        string `json:"tech"`
 	}
 
 	// binding:"required" があるフィールドが空ならGinが自動で400を返す
@@ -25,7 +28,7 @@ func CreateWork(c *gin.Context) {
 		return
 	}
 
-	err := repository.CreateWork(input.Title, input.Description, input.ImageURL, input.GithubURL)
+	err := repository.CreateWork(input.Title, input.Description, input.ImageURL, input.GithubURL, input.Period, input.Team, input.Tech)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create work"})
 		return
@@ -47,13 +50,16 @@ func UpdateWork(c *gin.Context) {
 		Description string `json:"description" binding:"required"`
 		ImageURL    string `json:"image_url"`
 		GithubURL   string `json:"github_url"`
+		Period      string `json:"period"`
+		Team        string `json:"team"`
+		Tech        string `json:"tech"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = repository.UpdateWork(id, input.Title, input.Description, input.ImageURL, input.GithubURL, time.Now())
+	err = repository.UpdateWork(id, input.Title, input.Description, input.ImageURL, input.GithubURL, input.Period, input.Team, input.Tech, time.Now())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work"})
 		return
@@ -76,4 +82,22 @@ func DeleteWork(c *gin.Context) {
 	}
 	// 削除成功は「内容なし（204 No Content）」で返すのが REST の慣例
 	c.Status(http.StatusNoContent)
+}
+func UpdateWorksOrder(c *gin.Context) {
+	var input []struct {
+		ID    int64 `json:"id"`
+		Order int   `json:"order"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, item := range input {
+		if err := repository.UpdateWorkSortOrder(item.ID, item.Order); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update work order"})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Work order updated"})
 }

@@ -8,32 +8,39 @@ export default function AdminLogin() {
   const [privKey, setPrivKey] = useState("");
   const [status, setStatus] = useState("");
 
-  const handleLogin = async () => {
-    setStatus("1. サーバーからチャレンジ（合言葉）を取得中...");
+  React.useEffect(() => {
+    const savedKey = localStorage.getItem("admin_priv_key");
+    if (savedKey) {
+      setPrivKey(savedKey);
+      // 自動ログインの実行
+      setTimeout(() => {
+        handleLogin(savedKey);
+      }, 500);
+    }
+  }, []);
+
+  const handleLogin = async (keyToUse?: string) => {
+    const targetKey = keyToUse || privKey.trim();
+    if (!targetKey) return;
+
+    setStatus("1. サーバーからチャレンジを取得中...");
     try {
-      // 1. サーバーから合言葉をもらう
       const res = await fetch("http://localhost:8080/api/auth/challenge");
       const { challenge } = await res.json();
       
-      // Base64の文字列を、暗号処理用のバイナリ配列(Uint8Array)に変換する関数
       const b64ToUint8 = (str: string) => Uint8Array.from(atob(str), c => c.charCodeAt(0));
       const uint8ToB64 = (arr: Uint8Array) => btoa(String.fromCharCode(...arr));
 
-      setStatus("2. ブラウザ内で秘密鍵を使った署名を生成中...");
-      // 入力された秘密鍵と、合言葉をバイナリ変換
-      const privBytes = b64ToUint8(privKey.trim());
+      setStatus("2. 秘密鍵による署名を生成中...");
+      const privBytes = b64ToUint8(targetKey);
       const challengeBytes = b64ToUint8(challenge);
-      
-      // 秘密鍵の全データから、対応する公開鍵（南京錠）だけを抽出することもできます
       const keyPair = nacl.sign.keyPair.fromSecretKey(privBytes);
       const pubBase64 = uint8ToB64(keyPair.publicKey);
 
-      // ここが本丸：秘密鍵を使って、合言葉に「ハンコ（署名）」を押します！！
       const signatureBytes = nacl.sign.detached(challengeBytes, privBytes);
       const signatureBase64 = uint8ToB64(signatureBytes);
 
-      setStatus("3. サーバーへ検証をお願いしています...");
-      // サーバーへ「合言葉・ハンコ・公開鍵」の3点セットを送る
+      setStatus("3. サーバーで署名を検証中...");
       const verifyRes = await fetch("http://localhost:8080/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,23 +52,24 @@ export default function AdminLogin() {
       });
 
       if (!verifyRes.ok) {
-         setStatus("❌ 認証失敗：秘密鍵が間違っているか、期限切れです");
+         setStatus("❌ 認証失敗：鍵が正しくないか、期限切れです");
+         localStorage.removeItem("admin_priv_key");
          return;
       }
 
-      // 4. 検証成功！身分証（JWT）をブラウザに記憶させる
       const { token } = await verifyRes.json();
       localStorage.setItem("admin_token", token);
-      setStatus("✅ ログイン大成功！！（ダッシュボードへ移動します...）");
+      localStorage.setItem("admin_priv_key", targetKey); // 鍵をブラウザに記憶
       
-      // 成功したら次の画面へ遷移
+      setStatus("✅ 認証成功！ダッシュボードへ...");
+      
       setTimeout(() => {
          window.location.href = "/admin/dashboard";
-      }, 1200);
+      }, 1000);
 
     } catch(err) {
       console.error(err);
-      setStatus("エラーが発生しました。鍵の文字列が正しいか確認してください。");
+      setStatus("エラーが発生しました。");
     }
   };
 
@@ -87,7 +95,7 @@ export default function AdminLogin() {
           ></textarea>
 
           <button 
-            onClick={handleLogin}
+            onClick={() => handleLogin()}
             disabled={!privKey}
             className={`w-full font-bold py-4 px-6 rounded-xl shadow-lg transition-all text-white ${privKey ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 hover:shadow-purple-500/30 transform hover:-translate-y-1' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
           >

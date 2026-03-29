@@ -7,7 +7,7 @@ import (
 )
 
 func GetAllWorks() ([]model.Work, error) {
-	query := "SELECT id,title,description,image_url,github_url,created_at,updated_at FROM works ORDER BY created_at DESC"
+	query := "SELECT id,title,description,image_url,github_url,period,team,tech,display_order,created_at,updated_at FROM works ORDER BY display_order ASC, created_at DESC"
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -23,6 +23,10 @@ func GetAllWorks() ([]model.Work, error) {
 			&w.Description,
 			&w.ImageURL,
 			&w.GithubURL,
+			&w.Period,
+			&w.Team,
+			&w.Tech,
+			&w.DisplayOrder,
 			&w.CreatedAt,
 			&w.UpdatedAt,
 		); err != nil {
@@ -38,13 +42,17 @@ func GetAllWorks() ([]model.Work, error) {
 
 func GetWorkByID(id int64) (model.Work, error) {
 	var w model.Work
-	query := "SELECT id,title,description,image_url,github_url,created_at,updated_at FROM works WHERE id=?"
+	query := "SELECT id,title,description,image_url,github_url,period,team,tech,display_order,created_at,updated_at FROM works WHERE id=?"
 	err := DB.QueryRow(query, id).Scan(
 		&w.ID,
 		&w.Title,
 		&w.Description,
 		&w.ImageURL,
 		&w.GithubURL,
+		&w.Period,
+		&w.Team,
+		&w.Tech,
+		&w.DisplayOrder,
 		&w.CreatedAt,
 		&w.UpdatedAt,
 	)
@@ -54,23 +62,27 @@ func GetWorkByID(id int64) (model.Work, error) {
 	return w, nil
 }
 
-func CreateWork(title, description, imageURL, githubURL string) error {
+func CreateWork(title, description, imageURL, githubURL, period, team, tech string) error {
 	_, err := DB.Exec(
-		"INSERT INTO works (title, description, image_url, github_url) VALUES (?, ?, ?, ?)",
-		title, description, imageURL, githubURL,
+		"INSERT INTO works (title, description, image_url, github_url, period, team, tech) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		title, description, imageURL, githubURL, period, team, tech,
 	)
 	return err
 }
 
-func UpdateWork(id int64, title, description, imageURL, githubURL string, now time.Time) error {
+func UpdateWork(id int64, title, description, imageURL, githubURL, period, team, tech string, now time.Time) error {
 	_, err := DB.Exec(
-		"UPDATE works SET title=?, description=?, image_url=?, github_url=?, updated_at=? WHERE id=?",
-		title, description, imageURL, githubURL, now, id,
+		"UPDATE works SET title=?, description=?, image_url=?, github_url=?, period=?, team=?, tech=?, updated_at=? WHERE id=?",
+		title, description, imageURL, githubURL, period, team, tech, now, id,
 	)
 	return err
 }
 
 func DeleteWork(id int64) error {
 	_, err := DB.Exec("DELETE FROM works WHERE id=?", id)
+	return err
+}
+func UpdateWorkSortOrder(id int64, order int) error {
+	_, err := DB.Exec("UPDATE works SET display_order=? WHERE id=?", order, id)
 	return err
 }

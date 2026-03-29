@@ -69,3 +69,15 @@
   - **基盤デザインの再構築**: 3D モデルに代わって、CSS による「オーロラグラデーション背景」と「ノイズテクスチャ」をヒーローセクションに導入。3D の奥行き感ではなく、レイヤー構造と透明度による「デジタルな奥行き」を追求。
   - **仕様の再定義**: 3D 実装タスクを除外し、Framer Motion を用いた詳細なマイクロインタラクションの実装を主軸に据えた [UI_REFINEMENT_SPEC.md](file:///home/dice/programs/my_portfolio/docs/UI_REFINEMENT_SPEC.md) を策定。
   - **トップページのリセット**: 3D ロジックへの依存を断ち切り、ピュアな React コンポーネントとして Hero セクションを再構築。次ステップでアニメーションとグラデーションの強化を行う準備を完了。
+
+---
+
+### Phase 6: Terminal Mono x Simulation 3D の統合適用 の進捗
+  - **方針の定義と確認**: ユーザーの要望である「Glass Dark」「Terminal Mono (ターミナル風美学)」「Simulation 3D (奥行きと透け感)」を組み合わせた新UI仕様書を策定。SVGアイコンデータの修正に伴い、`dice.svg` のページ内統合を含めた改修を実行。
+  - **`globals.css` の拡張**: `.glass-panel` クラスを新設。`backdrop-blur-16px` と `box-shadow` を駆使し、深い黒とガラスが重なる特有の「透け感・反射」を共通CSSとして定義した。
+  - **トップページの3Dパララックス演出**: `page.tsx` に `framer-motion` の `useScroll` と `useTransform` を導入。スクロールに連動して奥のグリッドや発光球体（Lime Green / Cyan）がゆっくり移動するパララックス（視差）効果を実装し、疑似的な3D空間・奥行きを演出した。
+  - **アイコン (dice.svg) の完全統合**:
+    1. **Favicon**: `layout.tsx` の `metadata.icons` に追加し、ブラウザタブでサイコロが表示されるよう構成。
+    2. **ヘッダー**: `Header.tsx` の左上にあるターミナルアイコンを `dice.svg` に差し替え、ブランドとしての統一感を向上。
+    3. **Heroセクション & 自己紹介パネル**: `page.tsx` 内の特大タイトル (DICE ARCHIVE) の直後や、Identificationパネルのアバター箇所にアイコンを配置し、アイデンティティを確立。
+  - **制作物タイルのリファイン**: 基本のレイアウトを維持しつつ、親コンテナを先述の `.glass-panel` に変更。ホバー時にライムグリーンに発光し、手前に浮き上がる（Z軸移動）エフェクトを適用し、Glass Dark空間との融合を果たした。

@@ -59,3 +59,21 @@ func DeleteSkill(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+func UpdateSkillsOrder(c *gin.Context) {
+	var input []struct {
+		ID    int64 `json:"id"`
+		Order int   `json:"order"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, item := range input {
+		if err := repository.UpdateSkillSortOrder(item.ID, item.Order); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update skill order"})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Skill order updated"})
+}

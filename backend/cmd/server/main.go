@@ -59,10 +59,12 @@ func main(){
 		// Works のCRUD
 		admin.POST("/works",        handler.CreateWork)
 		admin.PUT("/works/:id",    handler.UpdateWork)
+		admin.PUT("/works/order",  handler.UpdateWorksOrder)
 		admin.DELETE("/works/:id", handler.DeleteWork)
 		// Skills のCRUD
 		admin.POST("/skills",        handler.CreateSkill)
 		admin.PUT("/skills/:id",    handler.UpdateSkill)
+		admin.PUT("/skills/order",  handler.UpdateSkillsOrder)
 		admin.DELETE("/skills/:id", handler.DeleteSkill)
 		// Timeline のCRUD
 		admin.POST("/timeline",        handler.CreateTimeline)
