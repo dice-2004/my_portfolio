@@ -83,7 +83,7 @@ export default function Home() {
       {/* Background System Layers with True 3D Simulation */}
       <div className="fixed inset-0 bg-[#020617] z-[-3]" />
       
-      <div className="fixed inset-0 pointer-events-none z-[-2] overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none z-[-2] overflow-hidden contain-strict">
          <div className="tech-grid-3d" />
       </div>
       <div className="fixed inset-0 noise-bg opacity-[0.02] pointer-events-none z-[-1]" />
@@ -123,15 +123,15 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
-                 <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group">
-                    <div className="absolute -left-8 md:-left-24 -top-8 md:-top-32 opacity-30 group-hover:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
+                 <div className="lg:col-span-12 relative flex flex-col items-start mb-16">
+                    <div className="absolute -left-8 md:-left-24 -top-8 md:-top-32 opacity-30 hover:opacity-70 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-auto select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu group/logo">
                        <img 
                           src="/dice.svg" 
-                          className="w-[180px] md:w-[500px] h-[180px] md:h-[500px] object-contain -rotate-12 group-hover:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
+                          className="w-[180px] md:w-[500px] h-[180px] md:h-[500px] object-contain -rotate-12 group-hover/logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
                           alt="Dice background logo" 
                        />
                     </div>
-                    <div className="relative z-10">
+                    <div className="relative z-10 pointer-events-none">
                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1">
                           <Typewriter text={"DICE\nPORTFOLIO"} className="text-white drop-shadow-lg leading-[1.1]" delay={0.2} speed={0.1} cursor={true} />
                        </h1>
@@ -289,7 +289,7 @@ export default function Home() {
                     </div>
 
                     <a 
-                      href="https://x.com/dice_2004" 
+                      href="https://x.com/_dice_ke" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="mt-4 glass-panel px-12 py-4 border border-white/10 hover:border-cyan-400 hover:bg-white/5 text-white transition-all duration-500 flex items-center gap-4 group/btn shadow-[0_0_20px_rgba(34,211,238,0.05)] hover:shadow-[0_0_30px_rgba(34,211,238,0.2)]"
