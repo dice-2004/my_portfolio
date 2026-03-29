@@ -28,7 +28,10 @@ export default function AdminLogin() {
       const res = await fetch("/api/auth/challenge");
       const { challenge } = await res.json();
       
-      const b64ToUint8 = (str: string) => Uint8Array.from(atob(str), c => c.charCodeAt(0));
+      const b64ToUint8 = (str: string) => {
+        const cleanStr = str.replace(/\s/g, '');
+        return Uint8Array.from(atob(cleanStr), c => c.charCodeAt(0));
+      };
       const uint8ToB64 = (arr: Uint8Array) => btoa(String.fromCharCode(...arr));
 
       setStatus("2. 秘密鍵による署名を生成中...");
