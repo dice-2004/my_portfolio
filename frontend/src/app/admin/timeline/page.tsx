@@ -271,7 +271,7 @@ export default function AdminTimelinePage() {
                    <div key={t.id} className="group relative p-6 bg-white/[0.01] border border-white/10 hover:border-cyan-400/30 transition-colors flex items-center justify-between backdrop-blur-sm">
                       <div className="flex flex-col gap-2 min-w-0">
                          <div className="text-[8px] font-mono text-gray-700 bg-white/5 px-2 py-1 uppercase tracking-tighter w-fit">
-                            {t.event_date.replace(/-/g, '.')}
+                            {[...new Set(t.event_date.replace(/-/g, '.').split(' . '))].join(' - ')}
                          </div>
                          <h3 className="text-sm font-black text-white group-hover:text-cyan-400 transition-colors tracking-tight uppercase truncate max-w-[180px]">
                            {t.title}

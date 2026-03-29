@@ -133,8 +133,8 @@ export default function HomeClient({ data }: { data: HomeData }) {
                           {/* Node Marker */}
                           <div className="absolute left-[-4.5px] top-1 w-2 h-2 rounded-full bg-[#020617] border border-white/20 group-hover/item:border-cyan-400 group-hover/item:bg-cyan-400 transition-all duration-500 z-10 box-content" />
                           
-                          <div className="text-[9px] font-mono text-gray-500 mb-2 group-hover/item:text-cyan-400 transition-colors tracking-tighter uppercase">
-                            [{t.event_date.replace(/-/g, '.')}]
+                          <div className="text-[9px] font-mono text-gray-500 mb-2 group-hover/item:text-cyan-400 transition-colors tracking-tighter uppercase whitespace-nowrap">
+                            [{[...new Set(t.event_date.replace(/-/g, '.').split(' . '))].join(' - ')}]
                           </div>
                           <h4 className="text-sm font-sans font-bold tracking-tight text-gray-400 group-hover/item:text-white transition-colors leading-snug">
                             {t.title}
