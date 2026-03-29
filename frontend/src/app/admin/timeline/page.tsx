@@ -56,7 +56,6 @@ export default function AdminTimelinePage() {
       if (res.ok) {
         const data = await res.json();
         setTimelines(Array.isArray(data) ? data.sort((a, b) => {
-          // Date descending order usually preferred for records
           return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
         }) : []);
       }
@@ -170,20 +169,10 @@ export default function AdminTimelinePage() {
                    </label>
                    <input
                     type="date"
-                    className="w-full bg-black/40 border border-white/10 p-4 text-[10px] font-mono text-white outline-none focus:border-cyan-400 transition-all uppercase"
+                    className="w-full bg-black/40 border border-white/10 p-4 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all custom-calendar-picker"
                     value={form.event_date}
                     onChange={(e) => setForm({ ...form, event_date: e.target.value })}
                   />
-                </div>
-
-                <div className="md:col-span-2 group/field">
-                   <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Event_Description (Plain Text)</label>
-                   <textarea
-                     className="w-full bg-black/40 border border-white/10 p-5 min-h-[150px] text-xs font-mono text-gray-300 outline-none focus:border-cyan-400 transition-all resize-none shadow-inner"
-                     placeholder="DATA_LOG_SUMMARY..."
-                     value={form.description}
-                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                   />
                 </div>
               </div>
             </div>

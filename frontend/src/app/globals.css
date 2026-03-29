@@ -187,3 +187,9 @@ h1, h2, h3, h4 {
   transform: translateZ(0);
 }
 
+
+/* Custom Calendar Picker Icon styling */
+.custom-calendar-picker::-webkit-calendar-picker-indicator {
+  filter: invert(80%) sepia(50%) saturate(1000%) hue-rotate(140deg) brightness(100%) contrast(100%);
+  cursor: pointer;
+}
