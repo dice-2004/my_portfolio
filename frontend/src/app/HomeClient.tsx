@@ -65,7 +65,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
       <div className="max-w-[1440px] mx-auto relative z-10 px-6 md:px-12 lg:px-16 pt-32 pb-64">
         
         {/* 1. Technical Hero: Refined Scale */}
-        <section className="min-h-[70vh] flex flex-col justify-center relative mb-40 group/hero">
+        <section className="min-h-[70vh] flex flex-col justify-center relative mb-40">
            <div className="relative z-10 animate-fade-in">
               <div className="flex flex-col gap-2 mb-12 animate-fade-in opacity-0 [animation-delay:200ms] [animation-fill-mode:forwards]">
                  <div className="flex items-center gap-4">
@@ -75,16 +75,17 @@ export default function HomeClient({ data }: { data: HomeData }) {
               </div>
 
               <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
-                 <div className="lg:col-span-12 relative flex flex-col items-start mb-16">
-                    <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
+                 {/* Constrain hover trigger to an appropriately sized container */}
+                 <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group/hero-logo w-fit">
+                    <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero-logo:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
                        <img 
                           src="/dice.svg" 
-                          className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
+                          className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero-logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
                           alt="Dice background logo" 
                        />
                     </div>
                     <div className="relative z-10 pointer-events-none">
-                       <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1">
+                       <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1 p-4">
                           <Typewriter text={"DICE\nPORTFOLIO"} className="text-white drop-shadow-lg leading-[1.1]" delay={0.2} speed={0.1} cursor={true} />
                        </h1>
                     </div>
