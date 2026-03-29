@@ -122,21 +122,21 @@ export default function HomeClient({ data }: { data: HomeData }) {
                   <div className="absolute top-0 right-3 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <div className="absolute top-0 right-5 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <h3 className="text-[10px] font-mono text-white/40 mb-8 tracking-[0.4em] uppercase border-b border-white/10 pb-4">Chronology_Table</h3>
-                  <div className="space-y-6">
+                  <div className="flex flex-col">
                     {[...timelines]
-                      .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())
+                      .sort((a, b) => new Date(b.event_date.split(' - ')[0]).getTime() - new Date(a.event_date.split(' - ')[0]).getTime())
                       .map((t) => (
                         <div key={t.id} className="relative pl-8 pb-10 group/item last:pb-0">
                           {/* Continuous Vertical Line */}
                           <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/5 border-l border-dashed border-white/10 group-hover/item:border-cyan-400/30 transition-colors" />
                           
                           {/* Node Marker */}
-                          <div className="absolute left-[-4.5px] top-0 w-2 h-2 rounded-full bg-[#020617] border border-white/20 group-hover/item:border-cyan-400 group-hover/item:bg-cyan-400 transition-all duration-500 z-10 box-content" />
+                          <div className="absolute left-[-4.5px] top-1 w-2 h-2 rounded-full bg-[#020617] border border-white/20 group-hover/item:border-cyan-400 group-hover/item:bg-cyan-400 transition-all duration-500 z-10 box-content" />
                           
-                          <div className="text-[10px] font-mono text-gray-500 mb-2 group-hover/item:text-cyan-400 transition-colors">
-                            [{t.event_date.split('-').join('.')}]
+                          <div className="text-[9px] font-mono text-gray-500 mb-2 group-hover/item:text-cyan-400 transition-colors tracking-tighter uppercase">
+                            [{t.event_date.replace(/-/g, '.')}]
                           </div>
-                          <h4 className="text-sm font-sans font-bold tracking-tight text-gray-400 group-hover/item:text-white transition-colors">
+                          <h4 className="text-sm font-sans font-bold tracking-tight text-gray-400 group-hover/item:text-white transition-colors leading-snug">
                             {t.title}
                           </h4>
                         </div>

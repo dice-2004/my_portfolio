@@ -18,7 +18,7 @@ interface Timeline {
 const emptyForm = { 
   title: "", 
   description: "", 
-  event_date: new Date().toISOString().split('T')[0], 
+  event_date: "", // Will be combined from start and end
   category: "General", 
   display_order: 1 
 };
@@ -27,6 +27,9 @@ export default function AdminTimelinePage() {
   const [token, setToken]       = useState("");
   const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [form, setForm]         = useState(emptyForm);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate]     = useState("");
+  const [isCurrent, setIsCurrent] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [status, setStatus]     = useState("");
 
@@ -56,7 +59,10 @@ export default function AdminTimelinePage() {
       if (res.ok) {
         const data = await res.json();
         setTimelines(Array.isArray(data) ? data.sort((a, b) => {
-          return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
+          // Sort by start date (the left part of the event_date string)
+          const dateA = a.event_date.split(' - ')[0];
+          const dateB = b.event_date.split(' - ')[0];
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
         }) : []);
       }
     } catch (err) {
@@ -68,21 +74,27 @@ export default function AdminTimelinePage() {
     const isEditing = editingId !== null;
     const url = isEditing ? `/api/admin/timeline/${editingId}` : "/api/admin/timeline";
     
-    if (!form.title || !form.event_date) {
-      setStatus("⚠️ Title and Date are required.");
+    // Combine start and end
+    const combinedDate = isCurrent ? `${startDate} - Present` : (endDate ? `${startDate} - ${endDate}` : startDate);
+    const finalForm = { ...form, event_date: combinedDate };
+
+    if (!finalForm.title || !finalForm.event_date) {
+      setStatus("⚠️ Title and Period are required.");
       return;
     }
 
     try {
       const res = await authFetch(url, { 
         method: isEditing ? "PUT" : "POST", 
-        body: JSON.stringify(form) 
+        body: JSON.stringify(finalForm) 
       });
       
       if (res.ok) {
         setStatus(isEditing ? "✅ Record updated." : "✅ New event archived.");
         setForm(emptyForm);
         setEditingId(null);
+        setEndDate("");
+        setIsCurrent(false);
         fetchTimelines();
       } else {
         setStatus("❌ Operation failed.");
@@ -116,6 +128,23 @@ export default function AdminTimelinePage() {
       category: t.category || "General",
       display_order: t.display_order || 1,
     });
+    
+    // Parse the event_date string back into individual parts
+    if (t.event_date.includes(' - ')) {
+      const parts = t.event_date.split(' - ');
+      setStartDate(parts[0]);
+      if (parts[1] === 'Present') {
+        setIsCurrent(true);
+        setEndDate("");
+      } else {
+        setIsCurrent(false);
+        setEndDate(parts[1]);
+      }
+    } else {
+      setStartDate(t.event_date);
+      setEndDate("");
+      setIsCurrent(false);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -130,7 +159,7 @@ export default function AdminTimelinePage() {
                <Clock className="text-cyan-400" size={24} /> 
                Timeline_Registry_Manager
              </h1>
-             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.6-Stable // Chronos_Archive</p>
+             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.7-Stable // Chronos_Archive_Tools</p>
           </div>
           <Link href="/admin/dashboard" className="px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all flex items-center gap-3 w-fit">
             <ArrowLeft size={14} /> [ Return_to_Root ]
@@ -140,7 +169,7 @@ export default function AdminTimelinePage() {
         <div className="grid grid-cols-1 gap-16 items-start xl:grid-cols-12">
           
           {/* Timeline Entry Form (Left Column) */}
-          <section className="xl:col-span-12 2xl:col-span-7 bg-white/[0.02] border border-white/5 p-10 relative group">
+          <section className="xl:col-span-12 2xl:col-span-8 bg-white/[0.02] border border-white/5 p-10 relative group">
             <div className="absolute top-0 left-0 w-6 h-[1px] bg-cyan-400" />
             <div className="absolute top-0 left-0 w-[1px] h-6 bg-cyan-400" />
             
@@ -152,7 +181,7 @@ export default function AdminTimelinePage() {
             </div>
 
             <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
                 <div className="md:col-span-2 group/field">
                    <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Event_Title</label>
                    <input
@@ -163,16 +192,42 @@ export default function AdminTimelinePage() {
                   />
                 </div>
 
-                <div className="md:col-span-2 group/field">
+                <div className="group/field">
                    <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
-                      <Calendar size={10} /> Date_Timestamp
+                      <Calendar size={10} /> Date_Start
                    </label>
                    <input
                     type="date"
                     className="w-full bg-black/40 border border-white/10 p-4 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all custom-calendar-picker"
-                    value={form.event_date}
-                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
                   />
+                </div>
+
+                <div className="group/field">
+                   <div className="flex justify-between items-end mb-2">
+                      <label className="block text-[8px] text-gray-600 uppercase tracking-widest font-black flex items-center gap-2">
+                        <Calendar size={10} /> Date_End
+                      </label>
+                      <button 
+                        onClick={() => setIsCurrent(!isCurrent)}
+                        className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 border transition-all ${isCurrent ? 'bg-cyan-400 text-black border-cyan-400' : 'bg-transparent text-gray-700 border-white/10'}`}
+                      >
+                        Present
+                      </button>
+                   </div>
+                   {!isCurrent ? (
+                     <input
+                      type="date"
+                      className="w-full bg-black/40 border border-white/10 p-4 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all custom-calendar-picker"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                   ) : (
+                     <div className="w-full bg-white/5 border border-white/10 p-4 text-[10px] font-black text-white/20 uppercase tracking-[0.4em] select-none italic h-[52px] flex items-center justify-center">
+                        Active_Sequence...
+                     </div>
+                   )}
                 </div>
               </div>
             </div>
@@ -187,7 +242,7 @@ export default function AdminTimelinePage() {
                </button>
                {editingId && (
                  <button
-                   onClick={() => { setEditingId(null); setForm(emptyForm); }}
+                   onClick={() => { setEditingId(null); setForm(emptyForm); setEndDate(""); setIsCurrent(false); }}
                    className="px-10 py-6 border border-white/10 text-white hover:bg-red-500/10 transition-all"
                  >
                    <X size={20} />
@@ -203,7 +258,7 @@ export default function AdminTimelinePage() {
           </section>
 
           {/* Registry Registry (Right Column) */}
-          <section className="xl:col-span-12 2xl:col-span-5 flex flex-col gap-8">
+          <section className="xl:col-span-12 2xl:col-span-4 flex flex-col gap-8">
              <div className="flex items-end justify-between border-b border-white/5 pb-6">
                 <div>
                    <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">Event_Log_Archive</h2>
@@ -214,17 +269,15 @@ export default function AdminTimelinePage() {
              <div className="space-y-4">
                 {timelines.map((t) => (
                    <div key={t.id} className="group relative p-6 bg-white/[0.01] border border-white/10 hover:border-cyan-400/30 transition-colors flex items-center justify-between backdrop-blur-sm">
-                      <div className="flex items-center gap-6">
-                         <div className="text-[10px] font-mono text-gray-700 bg-white/5 px-3 py-1 uppercase tracking-tighter">
-                            {t.event_date}
+                      <div className="flex flex-col gap-2 min-w-0">
+                         <div className="text-[8px] font-mono text-gray-700 bg-white/5 px-2 py-1 uppercase tracking-tighter w-fit">
+                            {t.event_date.replace(/-/g, '.')}
                          </div>
-                         <div className="min-w-0">
-                            <h3 className="text-sm font-black text-white group-hover:text-cyan-400 transition-colors tracking-tight uppercase truncate max-w-[200px]">
-                              {t.title}
-                            </h3>
-                         </div>
+                         <h3 className="text-sm font-black text-white group-hover:text-cyan-400 transition-colors tracking-tight uppercase truncate max-w-[180px]">
+                           {t.title}
+                         </h3>
                       </div>
-                      <div className="flex items-center gap-2 opacity-20 group-hover:opacity-100 transition-all">
+                      <div className="flex items-center gap-2 opacity-20 group-hover:opacity-100 transition-all shrink-0">
                          <button 
                             onClick={() => handleEdit(t)}
                             className="p-3 bg-white/5 hover:bg-white/10 text-white transition-all"
