@@ -12,6 +12,8 @@ import { Reorder } from "framer-motion";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
+import "@uiw/react-md-editor/markdown-editor.css";
+import "@uiw/react-markdown-preview/markdown.css";
 
 interface Work {
   id: number;
@@ -25,7 +27,7 @@ interface Work {
   display_order: number;
 }
 
-const emptyForm = { title: "", description: "", image_url: "", github_url: "", period: "", team: "", tech: "" };
+const emptyForm = { title: "", description: "", github_url: "", period: "", team: "", tech: "" };
 
 const FullWorkPreview = ({ work }: { work: any }) => {
   // Award Logic
@@ -54,16 +56,6 @@ const FullWorkPreview = ({ work }: { work: any }) => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r border-b border-cyan-400/30" />
                   
                   <div className="flex flex-col gap-8">
-                     {work.image_url && (
-                        <div className="w-full aspect-video border border-white/10 overflow-hidden relative group/img">
-                           <img 
-                              src={work.image_url} 
-                              alt={work.title} 
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" 
-                           />
-                           <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60" />
-                        </div>
-                     )}
                      <div className="flex items-center gap-4 relative">
                         <Hash size={24} className="text-cyan-400" />
                         <h1 className="text-5xl font-black tracking-tighter uppercase leading-none text-white lg:text-7xl">{work.title || "UNTITLED"}</h1>
@@ -128,6 +120,8 @@ export default function AdminWorksPage() {
     fetchWorks(t);
   }, []);
 
+  const mdUploadRef = React.useRef<HTMLInputElement>(null);
+
   const authFetch = (url: string, options: RequestInit = {}, t = token) =>
     fetch(url, {
       ...options,
@@ -138,7 +132,7 @@ export default function AdminWorksPage() {
       },
     });
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMarkdownImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -157,8 +151,12 @@ export default function AdminWorksPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setForm({ ...form, image_url: data.image_url });
-        setStatus("✅ Image uploaded successfully.");
+        // ここでMarkdown書式を追記する
+        // 本格的なエディタの場合はカーソル位置に挿入するのが理想的だが、
+        // 今回はシンプルに文末に追記する形式にする
+        const insertion = `\n\n![Image](${data.image_url})\n\n`;
+        setForm({ ...form, description: form.description + insertion });
+        setStatus("✅ Image embedded in Markdown.");
       } else {
         setStatus("❌ Image upload failed.");
       }
@@ -167,6 +165,7 @@ export default function AdminWorksPage() {
       setStatus("❌ Error uploading image.");
     } finally {
       setIsUploading(false);
+      if (mdUploadRef.current) mdUploadRef.current.value = "";
       setTimeout(() => setStatus(""), 3000);
     }
   };
@@ -221,7 +220,6 @@ export default function AdminWorksPage() {
     setForm({
       title: work.title,
       description: work.description,
-      image_url: work.image_url ?? "",
       github_url: work.github_url ?? "",
       period: work.period ?? "",
       team: work.team ?? "",
@@ -348,67 +346,28 @@ export default function AdminWorksPage() {
                       />
                     </div>
 
-                    <div className="md:col-span-2 group/field">
-                       <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
-                          <Layers size={10} /> Specimen_Visual_Asset (Image)
-                       </label>
-                       <div className="flex flex-col md:flex-row gap-6 items-start">
-                          <div className="w-full md:w-1/2 aspect-video bg-black/40 border border-white/10 relative overflow-hidden group">
-                             {form.image_url ? (
-                                <>
-                                   <img 
-                                      src={form.image_url} 
-                                      alt="Preview" 
-                                      className="w-full h-full object-cover"
-                                   />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <button 
-                                         onClick={() => setForm({ ...form, image_url: "" })}
-                                         className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all"
-                                      >
-                                         <Trash2 size={16} />
-                                      </button>
-                                   </div>
-                                </>
-                             ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-700">
-                                   <Plus size={32} />
-                                   <span className="text-[10px] mt-2 uppercase tracking-widest font-black">No Image Loaded</span>
-                                </div>
-                             )}
-                             {isUploading && (
-                                <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
-                                   <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                                </div>
-                             )}
-                          </div>
-                          <div className="flex-1 space-y-4">
-                             <input
-                                type="file"
-                                id="image_upload"
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleUpload}
-                                disabled={isUploading}
-                             />
-                             <label 
-                                htmlFor="image_upload"
-                                className={`block w-full py-4 text-center border border-dashed border-white/20 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-cyan-400/50 hover:bg-white/5 transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                             >
-                                {isUploading ? "Uploading_Data_Stream..." : "[ SELECT_VISUAL_RESOURCE ]"}
-                             </label>
-                             <input
-                                className="w-full bg-black/40 border border-white/10 p-3 text-[10px] font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all"
-                                placeholder="OR_MANUAL_IMAGE_URL"
-                                value={form.image_url}
-                                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                             />
-                          </div>
-                       </div>
-                    </div>
 
                     <div className="md:col-span-2 group/field">
-                       <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Laboratory_Notes_MD</label>
+                       <div className="flex justify-between items-center mb-2">
+                          <label className="block text-[8px] text-gray-600 uppercase tracking-widest font-black">Laboratory_Notes_MD</label>
+                          
+                          <div className="flex gap-4">
+                             <input
+                                type="file"
+                                ref={mdUploadRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleMarkdownImageUpload}
+                                disabled={isUploading}
+                             />
+                             <button 
+                                onClick={() => mdUploadRef.current?.click()}
+                                className="px-4 py-1.5 border border-cyan-400/40 text-cyan-400 text-[8px] font-black uppercase tracking-widest hover:bg-cyan-400 hover:text-black transition-all flex items-center gap-2"
+                             >
+                                <Plus size={10} /> [ INSERT_MD_IMAGE ]
+                             </button>
+                          </div>
+                       </div>
                        <div data-color-mode="dark" className="border border-white/10 overflow-hidden">
                         <MDEditor
                           value={form.description}
@@ -417,8 +376,12 @@ export default function AdminWorksPage() {
                           preview="edit"
                         />
                       </div>
+                      <p className="text-[8px] text-gray-700 mt-2 uppercase tracking-widest italic flex items-center gap-2">
+                         <Terminal size={10} /> Tip: Click [INSERT_MD_IMAGE] to upload and append visual data to Markdown stream.
+                      </p>
                     </div>
                  </div>
+              </div>
 
                <div className="flex gap-4 pt-10 mt-10 border-t border-white/5">
                   <button
@@ -443,14 +406,13 @@ export default function AdminWorksPage() {
                     <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-[0.3em] animate-pulse">{status}</span>
                  </div>
                )}
-            </div>
           </section>
 
           {/* INDEX PANEL (Right Column) */}
           <section className="xl:col-span-12 2xl:col-span-5 flex flex-col gap-8">
              <div className="flex items-end justify-between border-b border-white/5 pb-6">
                 <div>
-                   <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">Archive_Registry</h2>
+                    <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">Archive_Registry</h2>
                    <p className="text-[10px] text-gray-600 mt-1 uppercase">Allocated_Slots: {works.length}/256</p>
                 </div>
                 <button 

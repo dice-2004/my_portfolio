@@ -81,24 +81,6 @@ export default function WorkDetailClient({ work, id }: { work: Work | null, id: 
                   <div className="absolute top-0 right-1/2 translate-x-1/2 w-20 h-0.5 bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
                   
                   <div className="flex flex-col gap-12">
-                     {work.image_url && (
-                        <div className="w-full aspect-video border border-white/10 overflow-hidden relative group/img">
-                           <img 
-                              src={work.image_url} 
-                              alt={work.title} 
-                              className="w-full h-full object-cover transition-transform duration-[2s] group-hover/img:scale-105" 
-                           />
-                           {/* Overlay HUD effect */}
-                           <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60" />
-                           <div className="absolute top-4 right-4 px-3 py-1 bg-black/80 backdrop-blur-md border border-cyan-400/40 text-cyan-400 text-[8px] font-black tracking-widest uppercase">
-                              Visual_Record_ID: {id.padStart(4, '0')}
-                           </div>
-                           <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                              <span className="text-[8px] text-white/40 tracking-[0.3em] font-black uppercase">Active_Stream</span>
-                           </div>
-                        </div>
-                     )}
                      <div className="flex flex-col gap-8">
                         <div className="flex items-center gap-4 relative">
                             <Hash size={18} className="text-cyan-400" />
