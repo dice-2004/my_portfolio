@@ -74,23 +74,25 @@ export default function HomeClient({ data }: { data: HomeData }) {
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
-                 {/* Constrain hover trigger to an appropriately sized container */}
-                 <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group/hero-logo w-fit">
-                    <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero-logo:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
-                       <img 
-                          src="/dice.svg" 
-                          className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero-logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
-                          alt="Dice background logo" 
-                       />
-                    </div>
+               <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
+                  {/* BACKGROUND LOGO - Moved outside for stability */}
+                  <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero-logo:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
+                     <img 
+                        src="/dice.svg" 
+                        className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero-logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
+                        alt="Dice background logo" 
+                     />
+                  </div>
+
+                  {/* Constrain hover trigger to an appropriately sized container */}
+                  <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group/hero-logo w-fit">
                     <div className="relative z-10 pointer-events-none">
                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1 p-4">
                           <Typewriter text={"DICE\nPORTFOLIO"} className="text-white drop-shadow-lg leading-[1.1]" delay={0.2} speed={0.1} cursor={true} />
                        </h1>
                     </div>
-                 </div>
-              </div>
+                  </div>
+               </div>
            </div>
         </section>
 
