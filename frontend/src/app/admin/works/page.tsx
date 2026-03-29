@@ -154,8 +154,9 @@ export default function AdminWorksPage() {
         // ここでMarkdown書式を追記する
         // 本格的なエディタの場合はカーソル位置に挿入するのが理想的だが、
         // 今回はシンプルに文末に追記する形式にする
-        const insertion = `\n\n![Image](${data.image_url})\n\n`;
-        setForm({ ...form, description: form.description + insertion });
+        const trimmed = form.description.trimEnd();
+        const insertion = `${trimmed ? "\n\n" : ""}![Image](${data.image_url})\n`;
+        setForm({ ...form, description: trimmed + insertion });
         setStatus("✅ Image embedded in Markdown.");
       } else {
         setStatus("❌ Image upload failed.");
@@ -371,9 +372,20 @@ export default function AdminWorksPage() {
                        <div data-color-mode="dark" className="border border-white/10 overflow-hidden">
                         <MDEditor
                           value={form.description}
-                          onChange={(v) => setForm({ ...form, description: v ?? "" })}
+                          onChange={(v) => {
+                             const normalized = (v ?? "").replace(/\r\n/g, "\n");
+                             setForm({ ...form, description: normalized });
+                          }}
                           height={400}
                           preview="edit"
+                          textareaProps={{
+                            style: {
+                              fontVariantLigatures: "none",
+                              fontFeatureSettings: "normal",
+                              letterSpacing: "0",
+                              lineHeight: "1.6",
+                            }
+                          }}
                         />
                       </div>
                       <p className="text-[8px] text-gray-700 mt-2 uppercase tracking-widest italic flex items-center gap-2">
