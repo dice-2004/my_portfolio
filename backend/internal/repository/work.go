@@ -7,7 +7,7 @@ import (
 )
 
 func GetAllWorks() ([]model.Work, error) {
-	query := "SELECT id,title,description,image_url,github_url,period,team,tech,display_order,created_at,updated_at FROM works ORDER BY display_order ASC, created_at DESC"
+	query := "SELECT id, title, description, COALESCE(image_url, ''), COALESCE(github_url, ''), COALESCE(period, ''), COALESCE(team, ''), COALESCE(tech, ''), display_order, created_at, updated_at FROM works ORDER BY display_order ASC, created_at DESC"
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func GetAllWorks() ([]model.Work, error) {
 
 func GetWorkByID(id int64) (model.Work, error) {
 	var w model.Work
-	query := "SELECT id,title,description,image_url,github_url,period,team,tech,display_order,created_at,updated_at FROM works WHERE id=?"
+	query := "SELECT id, title, description, COALESCE(image_url, ''), COALESCE(github_url, ''), COALESCE(period, ''), COALESCE(team, ''), COALESCE(tech, ''), display_order, created_at, updated_at FROM works WHERE id=?"
 	err := DB.QueryRow(query, id).Scan(
 		&w.ID,
 		&w.Title,

@@ -77,7 +77,10 @@ def parse_unified_md(path):
             "title": title,
             "description": description.strip(),
             "github_url": extracted["github"],
-            "image_url": "/no-image.png" # デフォルト
+            "image_url": "/no-image.png",
+            "period": extracted["period"],
+            "team": extracted["team"],
+            "tech": extracted["tech"]
         })
     return projects
 
@@ -101,10 +104,25 @@ def update_db():
     
     for p in projects:
         cursor.execute("""
-            INSERT INTO works (title, description, image_url, github_url)
-            VALUES (?, ?, ?, ?)
-        """, (p["title"], p["description"], p["image_url"], p["github_url"]))
+            INSERT INTO works (title, description, image_url, github_url, period, team, tech)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (p["title"], p["description"], p["image_url"], p["github_url"], p["period"], p["team"], p["tech"]))
     
+    # --- About テーブルの初期化 ---
+    print("Ensuring 'about' data exists...")
+    cursor.execute("SELECT COUNT(*) FROM about")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO about (content) VALUES ('こんにちは！Daisukeです。ここに自己紹介を記載してください。')")
+
+    # --- Skills / Timeline の初期化 (サンプル) ---
+    print("Checking if skills/timeline need data...")
+    cursor.execute("SELECT COUNT(*) FROM skills")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO skills (name, category, proficiency) VALUES ('Go', 'Backend', 80)")
+        cursor.execute("INSERT INTO skills (name, category, proficiency) VALUES ('Python', 'Backend', 90)")
+        cursor.execute("INSERT INTO skills (name, category, proficiency) VALUES ('TypeScript', 'Frontend', 75)")
+        cursor.execute("INSERT INTO skills (name, category, proficiency) VALUES ('Docker', 'DevOps', 70)")
+
     conn.commit()
     conn.close()
     print("Database updated successfully.")
