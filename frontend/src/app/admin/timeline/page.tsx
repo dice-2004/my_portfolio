@@ -1,17 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { 
-  Move, Edit3, Trash2, X, Plus, Save, ArrowLeft, Hash, 
-  Clock, Calendar, Layers, Terminal, ChevronLeft 
+  Move, Edit3, Trash2, X, Plus, Save, ArrowLeft, Clock, Calendar, ChevronLeft 
 } from "lucide-react";
-import { Reorder } from "framer-motion";
-
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
-import "@uiw/react-md-editor/markdown-editor.css";
-import "@uiw/react-markdown-preview/markdown.css";
 
 interface Timeline { 
   id: number; 
@@ -26,7 +19,7 @@ const emptyForm = {
   title: "", 
   description: "", 
   event_date: new Date().toISOString().split('T')[0], 
-  category: "Work", 
+  category: "General", 
   display_order: 1 
 };
 
@@ -36,7 +29,6 @@ export default function AdminTimelinePage() {
   const [form, setForm]         = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [status, setStatus]     = useState("");
-  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem("admin_token") ?? "";
@@ -63,7 +55,10 @@ export default function AdminTimelinePage() {
       const res = await fetch("/api/timeline");
       if (res.ok) {
         const data = await res.json();
-        setTimelines(Array.isArray(data) ? data.sort((a, b) => a.display_order - b.display_order) : []);
+        setTimelines(Array.isArray(data) ? data.sort((a, b) => {
+          // Date descending order usually preferred for records
+          return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
+        }) : []);
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -74,6 +69,11 @@ export default function AdminTimelinePage() {
     const isEditing = editingId !== null;
     const url = isEditing ? `/api/admin/timeline/${editingId}` : "/api/admin/timeline";
     
+    if (!form.title || !form.event_date) {
+      setStatus("⚠️ Title and Date are required.");
+      return;
+    }
+
     try {
       const res = await authFetch(url, { 
         method: isEditing ? "PUT" : "POST", 
@@ -112,10 +112,10 @@ export default function AdminTimelinePage() {
     setEditingId(t.id);
     setForm({
       title: t.title,
-      description: t.description,
+      description: t.description || "",
       event_date: t.event_date,
-      category: t.category,
-      display_order: t.display_order,
+      category: t.category || "General",
+      display_order: t.display_order || 1,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -131,7 +131,7 @@ export default function AdminTimelinePage() {
                <Clock className="text-cyan-400" size={24} /> 
                Timeline_Registry_Manager
              </h1>
-             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.5-Stable // Chronos_Auth</p>
+             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.6-Stable // Chronos_Archive</p>
           </div>
           <Link href="/admin/dashboard" className="px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all flex items-center gap-3 w-fit">
             <ArrowLeft size={14} /> [ Return_to_Root ]
@@ -157,14 +157,14 @@ export default function AdminTimelinePage() {
                 <div className="md:col-span-2 group/field">
                    <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Event_Title</label>
                    <input
-                    className="w-full bg-black/40 border border-white/10 p-5 text-lg font-black text-white outline-none focus:border-cyan-400 transition-all uppercase tracking-tight shadow-inner"
-                    placeholder="UNTITLED_EVENT"
+                    className="w-full bg-black/40 border border-white/10 p-5 text-lg font-black text-white outline-none focus:border-cyan-400 transition-all uppercase tracking-tight shadow-inner placeholder:opacity-20"
+                    placeholder="ENTER_EVENT_NAME"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                   />
                 </div>
 
-                <div className="group/field">
+                <div className="md:col-span-2 group/field">
                    <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
                       <Calendar size={10} /> Date_Timestamp
                    </label>
@@ -176,39 +176,14 @@ export default function AdminTimelinePage() {
                   />
                 </div>
 
-                <div className="group/field">
-                   <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
-                      <Layers size={10} /> Category_Tag
-                   </label>
-                   <input
-                    className="w-full bg-black/40 border border-white/10 p-4 text-[10px] font-mono text-white outline-none focus:border-cyan-400 transition-all uppercase"
-                    placeholder="Work / Project / Life"
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  />
-                </div>
-
                 <div className="md:col-span-2 group/field">
-                   <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Event_Data_Log (Markdown)</label>
-                   <div data-color-mode="dark" className="border border-white/10 overflow-hidden">
-                    <MDEditor
-                      value={form.description}
-                      onChange={(v) => {
-                         const normalized = (v ?? "").replace(/\r\n/g, "\n");
-                         setForm({ ...form, description: normalized });
-                      }}
-                      height={250}
-                      preview="edit"
-                      textareaProps={{
-                        style: {
-                          fontVariantLigatures: "none",
-                          fontFeatureSettings: "normal",
-                          letterSpacing: "0",
-                          lineHeight: "1.6",
-                        }
-                      }}
-                    />
-                  </div>
+                   <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black">Event_Description (Plain Text)</label>
+                   <textarea
+                     className="w-full bg-black/40 border border-white/10 p-5 min-h-[150px] text-xs font-mono text-gray-300 outline-none focus:border-cyan-400 transition-all resize-none shadow-inner"
+                     placeholder="DATA_LOG_SUMMARY..."
+                     value={form.description}
+                     onChange={(e) => setForm({ ...form, description: e.target.value })}
+                   />
                 </div>
               </div>
             </div>
@@ -258,9 +233,6 @@ export default function AdminTimelinePage() {
                             <h3 className="text-sm font-black text-white group-hover:text-cyan-400 transition-colors tracking-tight uppercase truncate max-w-[200px]">
                               {t.title}
                             </h3>
-                            <div className="text-[8px] text-gray-700 font-mono tracking-widest uppercase mt-1">
-                               {t.category}
-                            </div>
                          </div>
                       </div>
                       <div className="flex items-center gap-2 opacity-20 group-hover:opacity-100 transition-all">
