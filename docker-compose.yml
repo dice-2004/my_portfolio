@@ -31,10 +31,10 @@ services:
     #=========================================================
     # 【起動モードの切り替え】
     # 開発用 (Hot Reload有効):   command: npm run dev
-    # 本番用 (Build & Start):   command: sh -c "npm install && npm run build && npm run start"
+    # 本番用 (Build & Start):   command: sh -c "npm install --include=dev && npm run build && npm run start"
     # ※ 本番用の場合は下の行のコメントアウトを外し、上の行を隠してください
     #=========================================================
     # command: npm run dev
-    command: sh -c "npm install && npm run build && npm run start"
+    command: sh -c "npm install --include=dev && npm run build && npm run start"
     depends_on:
       - backend
