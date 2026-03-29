@@ -124,8 +124,12 @@ export default function Home() {
 
               <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
                  <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group">
-                    <div className="absolute -left-8 md:-left-24 -top-8 md:-top-32 opacity-30 group-hover:opacity-70 transition-all duration-700 pointer-events-none select-none z-0 drop-shadow-[0_0_20px_rgba(255,255,255,0.15)] mix-blend-lighten">
-                       <img src="/dice.svg" className="w-[180px] md:w-[450px] h-[180px] md:h-[450px] object-contain -rotate-12 group-hover:-rotate-6 transition-transform duration-700" alt="Dice background logo" />
+                    <div className="absolute -left-8 md:-left-24 -top-8 md:-top-32 opacity-30 group-hover:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
+                       <img 
+                          src="/dice.svg" 
+                          className="w-[180px] md:w-[500px] h-[180px] md:h-[500px] object-contain -rotate-12 group-hover:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
+                          alt="Dice background logo" 
+                       />
                     </div>
                     <div className="relative z-10">
                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1">
