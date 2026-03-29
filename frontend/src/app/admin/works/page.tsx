@@ -54,6 +54,16 @@ const FullWorkPreview = ({ work }: { work: any }) => {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-r border-b border-cyan-400/30" />
                   
                   <div className="flex flex-col gap-8">
+                     {work.image_url && (
+                        <div className="w-full aspect-video border border-white/10 overflow-hidden relative group/img">
+                           <img 
+                              src={work.image_url} 
+                              alt={work.title} 
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110" 
+                           />
+                           <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60" />
+                        </div>
+                     )}
                      <div className="flex items-center gap-4 relative">
                         <Hash size={24} className="text-cyan-400" />
                         <h1 className="text-5xl font-black tracking-tighter uppercase leading-none text-white lg:text-7xl">{work.title || "UNTITLED"}</h1>
@@ -109,6 +119,7 @@ export default function AdminWorksPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [status, setStatus]     = useState("");
   const [previewMode, setPreviewMode] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem("admin_token") ?? "";
@@ -126,6 +137,39 @@ export default function AdminWorksPage() {
         ...options.headers,
       },
     });
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setForm({ ...form, image_url: data.image_url });
+        setStatus("✅ Image uploaded successfully.");
+      } else {
+        setStatus("❌ Image upload failed.");
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("❌ Error uploading image.");
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setStatus(""), 3000);
+    }
+  };
 
   const fetchWorks = async (t: string) => {
     const res = await fetch("/api/works");
@@ -302,6 +346,65 @@ export default function AdminWorksPage() {
                         value={form.tech}
                         onChange={(e) => setForm({ ...form, tech: e.target.value })}
                       />
+                    </div>
+
+                    <div className="md:col-span-2 group/field">
+                       <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
+                          <Layers size={10} /> Specimen_Visual_Asset (Image)
+                       </label>
+                       <div className="flex flex-col md:flex-row gap-6 items-start">
+                          <div className="w-full md:w-1/2 aspect-video bg-black/40 border border-white/10 relative overflow-hidden group">
+                             {form.image_url ? (
+                                <>
+                                   <img 
+                                      src={form.image_url} 
+                                      alt="Preview" 
+                                      className="w-full h-full object-cover"
+                                   />
+                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <button 
+                                         onClick={() => setForm({ ...form, image_url: "" })}
+                                         className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all"
+                                      >
+                                         <Trash2 size={16} />
+                                      </button>
+                                   </div>
+                                </>
+                             ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-700">
+                                   <Plus size={32} />
+                                   <span className="text-[10px] mt-2 uppercase tracking-widest font-black">No Image Loaded</span>
+                                </div>
+                             )}
+                             {isUploading && (
+                                <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                                   <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                                </div>
+                             )}
+                          </div>
+                          <div className="flex-1 space-y-4">
+                             <input
+                                type="file"
+                                id="image_upload"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleUpload}
+                                disabled={isUploading}
+                             />
+                             <label 
+                                htmlFor="image_upload"
+                                className={`block w-full py-4 text-center border border-dashed border-white/20 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-cyan-400/50 hover:bg-white/5 transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                             >
+                                {isUploading ? "Uploading_Data_Stream..." : "[ SELECT_VISUAL_RESOURCE ]"}
+                             </label>
+                             <input
+                                className="w-full bg-black/40 border border-white/10 p-3 text-[10px] font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all"
+                                placeholder="OR_MANUAL_IMAGE_URL"
+                                value={form.image_url}
+                                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                             />
+                          </div>
+                       </div>
                     </div>
 
                     <div className="md:col-span-2 group/field">

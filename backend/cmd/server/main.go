@@ -88,7 +88,12 @@ func main(){
 		admin.DELETE("/timeline/:id", handler.DeleteTimeline)
 		// About は1件固定なので PUT のみ
 		admin.PUT("/about", handler.UpdateAbout)
+		// 画像アップロード
+		admin.POST("/upload", handler.UploadImageHandler)
 	}
+
+	// 静的ファイルの配信
+	r.Static("/api/uploads", "./uploads")
 
 	port := os.Getenv("PORT")
 	if port == "" {
