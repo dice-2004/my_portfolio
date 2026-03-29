@@ -27,11 +27,11 @@ export default function AdminTimelinePage() {
   const [token, setToken]       = useState("");
   const [timelines, setTimelines] = useState<Timeline[]>([]);
   const [form, setForm]         = useState(emptyForm);
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate]     = useState("");
-  const [isCurrent, setIsCurrent] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [status, setStatus]     = useState("");
+  const [startMonth, setStartMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [endMonth, setEndMonth]     = useState("");
+  const [isCurrent, setIsCurrent]   = useState(false);
+  const [editingId, setEditingId]   = useState<number | null>(null);
+  const [status, setStatus]         = useState("");
 
   useEffect(() => {
     const t = localStorage.getItem("admin_token") ?? "";
@@ -59,10 +59,10 @@ export default function AdminTimelinePage() {
       if (res.ok) {
         const data = await res.json();
         setTimelines(Array.isArray(data) ? data.sort((a, b) => {
-          // Sort by start date (the left part of the event_date string)
+          // Sort by start month (descending)
           const dateA = a.event_date.split(' - ')[0];
           const dateB = b.event_date.split(' - ')[0];
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
+          return dateB.localeCompare(dateA);
         }) : []);
       }
     } catch (err) {
@@ -74,12 +74,12 @@ export default function AdminTimelinePage() {
     const isEditing = editingId !== null;
     const url = isEditing ? `/api/admin/timeline/${editingId}` : "/api/admin/timeline";
     
-    // Combine start and end
-    const combinedDate = isCurrent ? `${startDate} - Present` : (endDate ? `${startDate} - ${endDate}` : startDate);
+    // Combine start and end months
+    const combinedDate = isCurrent ? `${startMonth} - Present` : (endMonth ? `${startMonth} - ${endMonth}` : startMonth);
     const finalForm = { ...form, event_date: combinedDate };
 
-    if (!finalForm.title || !finalForm.event_date) {
-      setStatus("⚠️ Title and Period are required.");
+    if (!finalForm.title || !startMonth) {
+      setStatus("⚠️ Title and Start Month are required.");
       return;
     }
 
@@ -93,7 +93,7 @@ export default function AdminTimelinePage() {
         setStatus(isEditing ? "✅ Record updated." : "✅ New event archived.");
         setForm(emptyForm);
         setEditingId(null);
-        setEndDate("");
+        setEndMonth("");
         setIsCurrent(false);
         fetchTimelines();
       } else {
@@ -132,17 +132,17 @@ export default function AdminTimelinePage() {
     // Parse the event_date string back into individual parts
     if (t.event_date.includes(' - ')) {
       const parts = t.event_date.split(' - ');
-      setStartDate(parts[0]);
+      setStartMonth(parts[0]);
       if (parts[1] === 'Present') {
         setIsCurrent(true);
-        setEndDate("");
+        setEndMonth("");
       } else {
         setIsCurrent(false);
-        setEndDate(parts[1]);
+        setEndMonth(parts[1]);
       }
     } else {
-      setStartDate(t.event_date);
-      setEndDate("");
+      setStartMonth(t.event_date);
+      setEndMonth("");
       setIsCurrent(false);
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -157,9 +157,9 @@ export default function AdminTimelinePage() {
           <div>
              <h1 className="text-3xl font-black tracking-tighter text-white inline-flex items-center gap-4 uppercase">
                <Clock className="text-cyan-400" size={24} /> 
-               Timeline_Registry_Manager
+               Timeline_Archive_Manager
              </h1>
-             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.7-Stable // Chronos_Archive_Tools</p>
+             <p className="text-[10px] text-gray-500 mt-2 tracking-[0.3em] uppercase opacity-60">System Version 4.3.8-Stable // Monthly_Archive_Tools</p>
           </div>
           <Link href="/admin/dashboard" className="px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all flex items-center gap-3 w-fit">
             <ArrowLeft size={14} /> [ Return_to_Root ]
@@ -194,20 +194,20 @@ export default function AdminTimelinePage() {
 
                 <div className="group/field">
                    <label className="block text-[8px] text-gray-600 uppercase mb-2 tracking-widest font-black flex items-center gap-2">
-                      <Calendar size={10} /> Date_Start
+                      <Calendar size={10} /> Month_Start (YYYY.MM)
                    </label>
                    <input
-                    type="date"
+                    type="month"
                     className="w-full bg-black/40 border border-white/10 p-4 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all custom-calendar-picker"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    value={startMonth}
+                    onChange={(e) => setStartMonth(e.target.value)}
                   />
                 </div>
 
                 <div className="group/field">
                    <div className="flex justify-between items-end mb-2">
                       <label className="block text-[8px] text-gray-600 uppercase tracking-widest font-black flex items-center gap-2">
-                        <Calendar size={10} /> Date_End
+                        <Calendar size={10} /> Month_End (YYYY.MM)
                       </label>
                       <button 
                         onClick={() => setIsCurrent(!isCurrent)}
@@ -218,10 +218,10 @@ export default function AdminTimelinePage() {
                    </div>
                    {!isCurrent ? (
                      <input
-                      type="date"
+                      type="month"
                       className="w-full bg-black/40 border border-white/10 p-4 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-400 transition-all custom-calendar-picker"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      value={endMonth}
+                      onChange={(e) => setEndMonth(e.target.value)}
                     />
                    ) : (
                      <div className="w-full bg-white/5 border border-white/10 p-4 text-[10px] font-black text-white/20 uppercase tracking-[0.4em] select-none italic h-[52px] flex items-center justify-center">
@@ -242,7 +242,7 @@ export default function AdminTimelinePage() {
                </button>
                {editingId && (
                  <button
-                   onClick={() => { setEditingId(null); setForm(emptyForm); setEndDate(""); setIsCurrent(false); }}
+                   onClick={() => { setEditingId(null); setForm(emptyForm); setEndMonth(""); setIsCurrent(false); }}
                    className="px-10 py-6 border border-white/10 text-white hover:bg-red-500/10 transition-all"
                  >
                    <X size={20} />
@@ -261,7 +261,7 @@ export default function AdminTimelinePage() {
           <section className="xl:col-span-12 2xl:col-span-4 flex flex-col gap-8">
              <div className="flex items-end justify-between border-b border-white/5 pb-6">
                 <div>
-                   <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">Event_Log_Archive</h2>
+                   <h2 className="text-xs font-black text-white/40 uppercase tracking-[0.4em]">Monthly_Archive_Log</h2>
                    <p className="text-[10px] text-gray-600 mt-1 uppercase">Stored_Sequences: {timelines.length}</p>
                 </div>
              </div>
