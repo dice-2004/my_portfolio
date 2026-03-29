@@ -20,18 +20,11 @@ interface Work {
 }
 
 async function fetchWork(id: string) {
-  const urls = [
-    `http://localhost:8080/api/works/${id}`,
-    `http://127.0.0.1:8080/api/works/${id}`
-  ];
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { cache: "no-store", next: { revalidate: 0 } });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      // Quietly try next
-    }
+  try {
+    const res = await fetch(`/api/works/${id}`, { cache: "no-store", next: { revalidate: 0 } });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("Fetch error:", e);
   }
   return null;
 }

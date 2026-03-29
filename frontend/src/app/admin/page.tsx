@@ -25,7 +25,7 @@ export default function AdminLogin() {
 
     setStatus("1. サーバーからチャレンジを取得中...");
     try {
-      const res = await fetch("http://localhost:8080/api/auth/challenge");
+      const res = await fetch("/api/auth/challenge");
       const { challenge } = await res.json();
       
       const b64ToUint8 = (str: string) => Uint8Array.from(atob(str), c => c.charCodeAt(0));
@@ -41,7 +41,7 @@ export default function AdminLogin() {
       const signatureBase64 = uint8ToB64(signatureBytes);
 
       setStatus("3. サーバーで署名を検証中...");
-      const verifyRes = await fetch("http://localhost:8080/api/auth/verify", {
+      const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
