@@ -26,13 +26,13 @@ export default function AdminTimelinePage() {
     fetch(url, { ...options, headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("admin_token")}` } });
 
   const fetchTimelines = async () => {
-    const res = await fetch("http://localhost:8080/api/timeline");
+    const res = await fetch("/api/timeline");
     if (res.ok) setTimelines(await res.json());
   };
 
   const handleSubmit = async () => {
     const isEditing = editingId !== null;
-    const url = isEditing ? `http://localhost:8080/api/admin/timeline/${editingId}` : "http://localhost:8080/api/admin/timeline";
+    const url = isEditing ? `/api/admin/timeline/${editingId}` : "/api/admin/timeline";
     const res = await authFetch(url, { method: isEditing ? "PUT" : "POST", body: JSON.stringify(form) });
     if (res.ok) { setStatus(isEditing ? "✅ 更新しました" : "✅ 追加しました"); setForm(emptyForm); setEditingId(null); fetchTimelines(); }
     else { setStatus("❌ 保存に失敗しました"); }
@@ -41,7 +41,7 @@ export default function AdminTimelinePage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("削除しますか？")) return;
-    const res = await authFetch(`http://localhost:8080/api/admin/timeline/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/admin/timeline/${id}`, { method: "DELETE" });
     if (res.ok) { setStatus("🗑️ 削除しました"); fetchTimelines(); }
     setTimeout(() => setStatus(""), 3000);
   };

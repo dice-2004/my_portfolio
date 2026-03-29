@@ -35,7 +35,7 @@ export default function AdminDashboard() {
 
   // --- 「門番を通れるか？」の確認テスト ---
   const testPing = async () => {
-    const res = await authFetch("http://localhost:8080/api/admin/ping");
+    const res = await authFetch("/api/admin/ping");
     if (res.ok) {
       const data = await res.json();
       setPingResult(`✅ ${data.message}`);

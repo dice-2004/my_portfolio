@@ -33,7 +33,7 @@ export default function AdminSkillsPage() {
     });
 
   const fetchSkills = async () => {
-    const res = await fetch("http://localhost:8080/api/skills");
+    const res = await fetch("/api/skills");
     if (res.ok) {
        const data = await res.json();
        setSkills(data.sort((a: any, b: any) => a.display_order - b.display_order));
@@ -42,7 +42,7 @@ export default function AdminSkillsPage() {
 
   const saveOrder = async () => {
     const orderData = skills.map((s, i) => ({ id: s.id, order: i }));
-    const res = await authFetch("http://localhost:8080/api/admin/skills/order", {
+    const res = await authFetch("/api/admin/skills/order", {
        method: "PUT",
        body: JSON.stringify(orderData)
     });
@@ -57,7 +57,7 @@ export default function AdminSkillsPage() {
 
   const handleSubmit = async () => {
     const isEditing = editingId !== null;
-    const url = isEditing ? `http://localhost:8080/api/admin/skills/${editingId}` : "http://localhost:8080/api/admin/skills";
+    const url = isEditing ? `/api/admin/skills/${editingId}` : "/api/admin/skills";
     const res = await authFetch(url, { method: isEditing ? "PUT" : "POST", body: JSON.stringify(form) });
     if (res.ok) { 
        setStatus(isEditing ? "✅ Updated" : "✅ Added"); 
@@ -72,7 +72,7 @@ export default function AdminSkillsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this entry?")) return;
-    const res = await authFetch(`http://localhost:8080/api/admin/skills/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/admin/skills/${id}`, { method: "DELETE" });
     if (res.ok) { setStatus("🗑️ Deleted"); fetchSkills(); }
     setTimeout(() => setStatus(""), 3000);
   };

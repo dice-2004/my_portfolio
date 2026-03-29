@@ -12,13 +12,13 @@ export default function AdminAboutPage() {
   useEffect(() => {
     if (!localStorage.getItem("admin_token")) { window.location.href = "/admin"; return; }
     // 現在の自己紹介文を取得してエディタに流し込む
-    fetch("http://localhost:8080/api/about")
+    fetch("/api/about")
       .then(r => r.json())
       .then(d => setContent(d.content ?? ""));
   }, []);
 
   const handleSave = async () => {
-    const res = await fetch("http://localhost:8080/api/admin/about", {
+    const res = await fetch("/api/admin/about", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("admin_token")}` },
       body: JSON.stringify({ content }),

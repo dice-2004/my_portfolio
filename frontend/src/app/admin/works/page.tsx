@@ -128,7 +128,7 @@ export default function AdminWorksPage() {
     });
 
   const fetchWorks = async (t: string) => {
-    const res = await fetch("http://localhost:8080/api/works");
+    const res = await fetch("/api/works");
     if (res.ok) {
        const data = await res.json();
        setWorks(data.sort((a: any, b: any) => a.display_order - b.display_order));
@@ -137,7 +137,7 @@ export default function AdminWorksPage() {
 
   const saveOrder = async () => {
     const orderData = works.map((w, i) => ({ id: w.id, order: i }));
-    const res = await authFetch("http://localhost:8080/api/admin/works/order", {
+    const res = await authFetch("/api/admin/works/order", {
        method: "PUT",
        body: JSON.stringify(orderData)
     });
@@ -153,8 +153,8 @@ export default function AdminWorksPage() {
   const handleSubmit = async () => {
     const isEditing = editingId !== null;
     const url = isEditing
-      ? `http://localhost:8080/api/admin/works/${editingId}`
-      : "http://localhost:8080/api/admin/works";
+      ? `/api/admin/works/${editingId}`
+      : "/api/admin/works";
 
     const res = await authFetch(url, {
       method: isEditing ? "PUT" : "POST",
@@ -188,7 +188,7 @@ export default function AdminWorksPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Confirm data deletion? This action is irreversible.")) return;
-    const res = await authFetch(`http://localhost:8080/api/admin/works/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/admin/works/${id}`, { method: "DELETE" });
     if (res.ok) {
       setStatus("🗑️ Item purged from archive.");
       fetchWorks(token);
