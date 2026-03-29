@@ -27,9 +27,8 @@ export default function Home() {
     const fetchData = async () => {
       const fetcher = async (path: string) => {
         try {
-          // Use the correct portfolio URL if running in production
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://portfolio.dice-ke.tech';
-          const res = await fetch(`${baseUrl}/api/${path}`);
+          // Use relative path for client-side fetching to avoid domain issues
+          const res = await fetch(`/api/${path}`);
           const json = await res.json();
           // Backend might return {error: "..."} on 500
           if (json && !Array.isArray(json) && typeof json === 'object' && 'error' in json) {
@@ -113,7 +112,7 @@ export default function Home() {
       <div className="max-w-[1440px] mx-auto relative z-10 px-6 md:px-12 lg:px-16 pt-32 pb-64">
         
         {/* 1. Technical Hero: Refined Scale */}
-        <section className="min-h-[70vh] flex flex-col justify-center relative mb-40">
+        <section className="min-h-[70vh] flex flex-col justify-center relative mb-40 group/hero">
            <div className="relative z-10 animate-fade-in">
               <div className="flex flex-col gap-2 mb-12 animate-fade-in opacity-0 [animation-delay:200ms] [animation-fill-mode:forwards]">
                  <div className="flex items-center gap-4">
@@ -124,10 +123,10 @@ export default function Home() {
 
               <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
                  <div className="lg:col-span-12 relative flex flex-col items-start mb-16">
-                    <div className="absolute -left-8 md:-left-24 -top-8 md:-top-32 opacity-30 hover:opacity-70 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-auto select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu group/logo">
+                    <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
                        <img 
                           src="/dice.svg" 
-                          className="w-[180px] md:w-[500px] h-[180px] md:h-[500px] object-contain -rotate-12 group-hover/logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
+                          className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
                           alt="Dice background logo" 
                        />
                     </div>

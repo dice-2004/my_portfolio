@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"github.com/gin-gonic/gin"
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/dice/portfolio/internal/repository"
 	"github.com/dice/portfolio/internal/handler"
@@ -20,11 +21,26 @@ func main(){
 
 	repository.InitDB(dbPath)
 	repository.RunMigrations()
-	r :=gin.Default()
 
-	// CROS（クロスオリジンリソース共有）を許可するミドルウェアを追加
+	r := gin.New()
+	r.Use(gin.Recovery())
+	
+	// カスタムロガーを追加 (メソッド, URL, ステータス, 処理時間などを出力)
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		return fmt.Sprintf("[%s] %s | %3d | %13v | %15s | %-7s %#v\n",
+			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
+			param.ClientIP,
+			param.StatusCode,
+			param.Latency,
+			param.Method,
+			param.Path,
+			param.ErrorMessage,
+		)
+	}))
+
+	// CORS（クロスオリジンリソース共有）を許可するミドルウェアを追加
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3001", "http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3001", "http://localhost:3000", "https://portfolio.dice-ke.tech"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
