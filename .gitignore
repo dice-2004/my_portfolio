@@ -1,0 +1,31 @@
+# --- General ---
+.DS_Store
+.env*
+*.log
+__pycache__/
+
+# --- Root Task/Data Files ---
+blashup data.md
+data.md
+rowdata.md
+apply_migration_002.py
+sync_data.py
+
+# --- Backend ---
+backend/tmp/
+backend/data/*.db
+
+# --- Frontend ---
+# 依存関係とビルド成果物
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# AIアシスタント/特定ツール関連
+frontend/AGENTS.md
+frontend/CLAUDE.md
+frontend/replace.js
+
+# TypeScript
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
