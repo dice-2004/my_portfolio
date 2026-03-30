@@ -193,3 +193,23 @@ h1, h2, h3, h4 {
   filter: invert(80%) sepia(50%) saturate(1000%) hue-rotate(140deg) brightness(100%) contrast(100%);
   cursor: pointer;
 }
+
+/* Premium Timeline Scroll Area */
+.timeline-scroll-mask {
+  mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.1);
+  border-radius: 1px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.3);
+}

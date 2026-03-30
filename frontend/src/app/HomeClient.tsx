@@ -122,11 +122,11 @@ export default function HomeClient({ data }: { data: HomeData }) {
                   <div className="absolute top-0 right-3 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <div className="absolute top-0 right-5 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <h3 className="text-[10px] font-mono text-white/40 mb-8 tracking-[0.4em] uppercase border-b border-white/10 pb-4">Chronology_Table</h3>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col max-h-[500px] overflow-y-auto px-1 custom-scrollbar timeline-scroll-mask">
                     {[...timelines]
                       .sort((a, b) => new Date(b.event_date.split(' - ')[0]).getTime() - new Date(a.event_date.split(' - ')[0]).getTime())
                       .map((t) => (
-                        <div key={t.id} className="relative pl-8 pb-10 group/item last:pb-0">
+                        <div key={t.id} className="relative pl-8 pb-6 group/item last:pb-0">
                           {/* Continuous Vertical Line */}
                           <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/5 border-l border-dashed border-white/10 group-hover/item:border-cyan-400/30 transition-colors" />
                           
