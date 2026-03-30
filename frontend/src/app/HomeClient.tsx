@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import DiceLogo from '@/components/DiceLogo';
@@ -22,6 +22,27 @@ interface HomeData {
 
 export default function HomeClient({ data }: { data: HomeData }) {
   const { works, skills, about, timelines } = data;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollPos, setScrollPos] = useState({ isAtTop: true, isAtBottom: false });
+
+  const handleTimelineScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      setScrollPos({
+        isAtTop: scrollTop <= 1,
+        isAtBottom: Math.abs(scrollHeight - clientHeight - scrollTop) <= 1
+      });
+    }
+  };
+
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (scrollContainer) {
+      handleTimelineScroll();
+      scrollContainer.addEventListener('scroll', handleTimelineScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleTimelineScroll);
+    }
+  }, []);
 
   useEffect(() => {
     // Scroll restoration Logic
@@ -122,7 +143,14 @@ export default function HomeClient({ data }: { data: HomeData }) {
                   <div className="absolute top-0 right-3 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <div className="absolute top-0 right-5 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <h3 className="text-[10px] font-mono text-white/40 mb-8 tracking-[0.4em] uppercase border-b border-white/10 pb-4">Chronology_Table</h3>
-                  <div className="flex flex-col max-h-[500px] overflow-y-auto px-1 custom-scrollbar timeline-scroll-mask">
+                  <div 
+                    ref={scrollRef}
+                    className="flex flex-col max-h-[500px] overflow-y-auto px-1 custom-scrollbar"
+                    style={{
+                      WebkitMaskImage: `linear-gradient(to bottom, ${scrollPos.isAtTop ? 'black' : 'transparent'} 0%, black 10%, black 90%, ${scrollPos.isAtBottom ? 'black' : 'transparent'} 100%)`,
+                      maskImage: `linear-gradient(to bottom, ${scrollPos.isAtTop ? 'black' : 'transparent'} 0%, black 10%, black 90%, ${scrollPos.isAtBottom ? 'black' : 'transparent'} 100%)`
+                    }}
+                  >
                     {[...timelines]
                       .sort((a, b) => new Date(b.event_date.split(' - ')[0]).getTime() - new Date(a.event_date.split(' - ')[0]).getTime())
                       .map((t) => (
