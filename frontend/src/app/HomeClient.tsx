@@ -97,15 +97,15 @@ export default function HomeClient({ data }: { data: HomeData }) {
         </section>
 
         {/* 2. Structured Content: Information Panes (About) */}
-        <section id="about" className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-64 relative z-10 pt-32">
+        <section id="about" className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-64 relative z-10 pt-32 items-start">
             <header className="col-span-12 mb-8 text-left">
                <span className="text-[10px] font-mono text-cyan-400 mb-4 tracking-[0.4em] uppercase block">[ Operator_Identity ]</span>
                <h2 className="text-5xl md:text-7xl font-display font-black tracking-tighter uppercase whitespace-nowrap flex items-end">
                   <Typewriter text=">_ABOUT" speed={0.1} delay={0.2} />
                </h2>
             </header>
-             <article className="lg:col-span-8 group perspective-[1000px] cursor-default text-left">
-                <div className="glass-panel p-10 md:p-14 rounded-none relative overflow-hidden h-full border-white/5">
+             <article className="lg:col-span-8 group perspective-[1000px] cursor-default text-left lg:sticky lg:top-32">
+                <div className="glass-panel p-10 md:p-14 rounded-none relative overflow-hidden border-white/5">
                    <div className="absolute top-0 right-0 p-8 opacity-[0.01] rotate-12 pointer-events-none mix-blend-screen transition-all duration-1000 group-hover:opacity-[0.03] group-hover:rotate-0">
                       <Cpu size={160} />
                    </div>
@@ -117,8 +117,8 @@ export default function HomeClient({ data }: { data: HomeData }) {
              </article>
 
             {/* Event Timeline Pane */}
-            <aside className="lg:col-span-4 flex flex-col gap-6 perspective-[1000px] text-left">
-               <div className="glass-panel p-8 rounded-none flex-1 relative overflow-hidden">
+            <aside className="lg:col-span-4 flex flex-col gap-6 perspective-[1000px] text-left lg:sticky lg:top-32">
+               <div className="glass-panel p-8 rounded-none relative overflow-hidden">
                   <div className="absolute top-0 right-3 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <div className="absolute top-0 right-5 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <h3 className="text-[10px] font-mono text-white/40 mb-8 tracking-[0.4em] uppercase border-b border-white/10 pb-4">Chronology_Table</h3>
