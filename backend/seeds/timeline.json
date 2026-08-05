@@ -1,0 +1,79 @@
+[
+  {
+    "title": "近畿卓球選手権大会 出場",
+    "description": "高校時代に近畿卓球選手権大会に出場。",
+    "event_date": "2022-08",
+    "category": "Sports",
+    "display_order": 1
+  },
+  {
+    "title": "京都府立普通科高等学校 卒業",
+    "description": "京都府内の普通科高等学校を卒業。",
+    "event_date": "2023-03",
+    "category": "Education",
+    "display_order": 2
+  },
+  {
+    "title": "大阪工業大学 入学",
+    "description": "情報系の領域を専攻して学びを深める。",
+    "event_date": "2023-04",
+    "category": "Education",
+    "display_order": 3
+  },
+  {
+    "title": "大学文化祭実行委員会 広報担当",
+    "description": "文化祭の広報活動および各種システムの企画・運用に貢献 (2023〜2025)。",
+    "event_date": "2023-05",
+    "category": "Activity",
+    "display_order": 4
+  },
+  {
+    "title": "コンピュータ部 (HxS) 副部長 就任",
+    "description": "部員のアクティビティ推進やプロジェクト管理を担当 (2024〜2025)。",
+    "event_date": "2024-04",
+    "category": "Club",
+    "display_order": 5
+  },
+  {
+    "title": "KC3 / KC3Hack 運営スタッフ",
+    "description": "関西学生ITコミュニティKC3およびハッカソンの運営を担当 (2025〜2026)。",
+    "event_date": "2025-01",
+    "category": "Community",
+    "display_order": 6
+  },
+  {
+    "title": "ゆめみ 1dayインターン 参加",
+    "description": "株式会社ゆめみ 1dayインターンシップに参加 (2025/05/17)。",
+    "event_date": "2025-05-17",
+    "category": "Internship",
+    "display_order": 7
+  },
+  {
+    "title": "Sky 2week サマーインターン 参加",
+    "description": "Sky株式会社 2週間サマーインターンシップに参加 (2025/08/04〜)。",
+    "event_date": "2025-08-04",
+    "category": "Internship",
+    "display_order": 8
+  },
+  {
+    "title": "技育博 2025 vol.05 参加・サイバーエージェント賞受賞",
+    "description": "プロダクト「Oton-Zzz」を出展し、企業賞（サイバーエージェント賞）を受賞。",
+    "event_date": "2025-10",
+    "category": "Award",
+    "display_order": 9
+  },
+  {
+    "title": "技育博 2026 vol.01 参加",
+    "description": "次世代AIチャットプロダクト「yorimichi」を出展。",
+    "event_date": "2026-03",
+    "category": "Event",
+    "display_order": 10
+  },
+  {
+    "title": "大阪工業大学大学院 進学予定",
+    "description": "大学院へ進学し、高度な技術研究・開発を追求 (2027〜)。",
+    "event_date": "2027-04",
+    "category": "Education",
+    "display_order": 11
+  }
+]

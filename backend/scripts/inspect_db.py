@@ -1,8 +1,12 @@
 import sqlite3
 import os
 
-# パスの設定 (WSL内からのパスに調整)
-db_path = r"backend/data/portfolio.db"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR.startswith("/app"):
+    db_path = "/app/data/portfolio.db"
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+    db_path = os.path.join(BASE_DIR, "backend", "data", "portfolio.db")
 
 def inspect_db():
     if not os.path.exists(db_path):

@@ -1,0 +1,6 @@
+[
+  { "name": "Go", "category": "Backend", "proficiency": 80, "display_order": 1 },
+  { "name": "Python", "category": "Backend", "proficiency": 90, "display_order": 2 },
+  { "name": "TypeScript", "category": "Frontend", "proficiency": 75, "display_order": 3 },
+  { "name": "Docker", "category": "DevOps", "proficiency": 70, "display_order": 4 }
+]

@@ -21,6 +21,7 @@ func main(){
 
 	repository.InitDB(dbPath)
 	repository.RunMigrations()
+	repository.SeedData()
 
 	r := gin.New()
 	r.Use(gin.Recovery())
