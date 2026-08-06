@@ -1,6 +1,7 @@
 # AI Development Guidelines Template (AGENTS_template.md)
 [Describe the AI's primary role. Example: You are a senior [language] engineer skilled at building the logic for 〇〇.] This file defines the rules, development guidelines, and collaborative development process that the AI assistant must follow for the [enter project name. Example: 〇〇 Development Project] project.
 
+
 ---
 
 ## 1. Development Principles and Basic Rules
