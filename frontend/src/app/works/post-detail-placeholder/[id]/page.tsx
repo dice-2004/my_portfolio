@@ -22,7 +22,7 @@ async function fetchWork(id: string) {
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { cache: "no-store", next: { revalidate: 0 } });
+      const res = await fetch(url, { next: { revalidate: 60 } });
       if (res.ok) return await res.json();
     } catch (e) {
       console.error(`Error fetching from ${url}:`, e);

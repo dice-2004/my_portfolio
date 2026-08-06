@@ -1,7 +1,14 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useRef, useCallback } from 'react';
 
+/**
+ * Typewriter コンポーネント
+ *
+ * パフォーマンス最適化:
+ * - useRef + DOM直接更新で React の再レンダリングを回避
+ * - CSS animation でカーソル点滅（JS ベースのアニメーション不要）
+ * - requestAnimationFrame 不使用（テキスト更新は setTimeout で十分）
+ */
 export default function Typewriter({ 
   text, 
   delay = 0, 
@@ -15,39 +22,49 @@ export default function Typewriter({
   speed?: number,
   cursor?: boolean,
 }) {
-  const [displayedText, setDisplayedText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const hasStartedRef = useRef(false);
+  const cursorRef = useRef<HTMLSpanElement>(null);
+
+  const updateText = useCallback((content: string) => {
+    if (textRef.current) {
+      textRef.current.textContent = content;
+    }
+  }, []);
+
+  const setCursorVisible = useCallback((visible: boolean) => {
+    if (cursorRef.current) {
+      cursorRef.current.style.display = visible ? 'inline-block' : 'none';
+    }
+  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    let isActive = true; // Use this to prevent state updates if unmounted
-    
+    let isActive = true;
+
     // States: 0 = forward, 1 = pause end, 2 = backward, 3 = pause start
     let state = 0; 
     let currentIndex = 0;
 
+    const promptMatch = text.match(/^>_? /) || text.match(/^>_?/);
+    const prefix = promptMatch ? promptMatch[0] : "";
+    const baseText = text.slice(prefix.length);
+
     const startTypingLoop = () => {
-      setHasStarted(true);
-      
-      const promptMatch = text.match(/^>_? /) || text.match(/^>_?/);
-      const prefix = promptMatch ? promptMatch[0] : "";
-      const baseText = text.slice(prefix.length);
-      
-      setDisplayedText(prefix);
+      hasStartedRef.current = true;
+      setCursorVisible(true);
+      updateText(prefix);
 
       const typeChar = () => {
         if (!isActive) return;
 
         if (state === 0) { // Forward
-          setIsTyping(true);
           currentIndex++;
-          setDisplayedText(prefix + baseText.slice(0, currentIndex));
+          updateText(prefix + baseText.slice(0, currentIndex));
           
           if (currentIndex >= baseText.length) {
             state = 1;
-            setIsTyping(false);
-            timeoutId = setTimeout(typeChar, 4000); // Wait longer at end
+            timeoutId = setTimeout(typeChar, 4000);
           } else {
             timeoutId = setTimeout(typeChar, speed * 1000);
           }
@@ -55,13 +72,11 @@ export default function Typewriter({
           state = 2;
           typeChar();
         } else if (state === 2) { // Backward (Backspace)
-          setIsTyping(true);
           currentIndex--;
-          setDisplayedText(prefix + baseText.slice(0, currentIndex));
+          updateText(prefix + baseText.slice(0, currentIndex));
           
           if (currentIndex <= 0) {
             state = 3;
-            setIsTyping(false);
             timeoutId = setTimeout(typeChar, 1000); 
           } else {
             timeoutId = setTimeout(typeChar, (speed * 1000) / 2);
@@ -81,19 +96,19 @@ export default function Typewriter({
       isActive = false;
       clearTimeout(timeoutId);
     };
-  }, [text, delay, speed]);
+  }, [text, delay, speed, updateText, setCursorVisible]);
 
   return (
     <span className={`${className} whitespace-pre-wrap`}>
-      {displayedText}
-      {hasStarted && cursor && (
-        <motion.span 
-          animate={isTyping ? { opacity: 1 } : { opacity: [1, 0, 1] }} 
-          transition={isTyping ? {} : { repeat: Infinity, duration: 0.8, ease: "linear" }}
-          className="inline-block font-normal text-cyan-400 font-mono ml-[2px]"
+      <span ref={textRef} />
+      {cursor && (
+        <span 
+          ref={cursorRef}
+          className="inline-block font-normal text-cyan-400 font-mono ml-[2px] animate-cursor-blink"
+          style={{ display: 'none' }}
         >
           _
-        </motion.span>
+        </span>
       )}
     </span>
   );

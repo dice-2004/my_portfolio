@@ -1,9 +1,3 @@
-# 制作物統合マスターデータ (Works Unified Master Data)
-
-このファイルは `blashup data.md`, `data.md`, `rowdata.md` を統合し、全ての制作物の情報を網羅したマスターデータです。
-
----
-
 ## 1. Oton-Zzz (oton-zzz)
 - **GitHub**: https://github.com/jphacks/os_2512
 - **技術スタック**: Python (OpenCV, MediaPipe), C++/Arduino (M5StickCPlus2), IRremoteESP8266, pyserial

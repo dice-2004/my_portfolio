@@ -20,7 +20,7 @@ async function getWorkData(id: string): Promise<Work | null> {
   try {
     // Docker内部ネットワークではサービス名 'backend' で通信する
     const baseUrl = process.env.NODE_ENV === 'production' ? 'http://backend:8080' : 'http://localhost:8031';
-    const res = await fetch(`${baseUrl}/api/works/${id}`, { cache: 'no-store' });
+    const res = await fetch(`${baseUrl}/api/works/${id}`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {

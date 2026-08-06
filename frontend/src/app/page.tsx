@@ -12,8 +12,7 @@ async function getHomeData() {
   const fetcher = async (path: string) => {
     try {
       const res = await fetch(`${baseUrl}/api/${path}`, { 
-        cache: 'no-store',
-        next: { revalidate: 3600 } // 1時間ごとにキャッシュ更新
+        next: { revalidate: 60 } // 60秒ごとにバックグラウンドでキャッシュ再生成
       });
       if (!res.ok) return path === "about" ? { content: "" } : [];
       return await res.json();

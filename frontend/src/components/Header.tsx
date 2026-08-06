@@ -3,8 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Terminal, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
+/**
+ * Header コンポーネント
+ *
+ * パフォーマンス最適化:
+ * - 入場アニメーションを CSS @keyframes に置換（framer-motion の JS 初期化不要）
+ * - ナビのホバー背景のみ framer-motion layoutId を使用（CSS では困難な shared layout animation）
+ */
 export default function Header() {
   const [hovered, setHovered] = React.useState<string | null>(null);
 
@@ -16,17 +23,14 @@ export default function Header() {
   ];
 
   return (
-    <motion.header 
-      initial={{ y: -50, x: "-50%", opacity: 0 }}
-      animate={{ y: 0, x: "-50%", opacity: 1 }}
-      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] w-auto"
+    <header 
+      className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] w-auto animate-header-enter"
     >
       <div className="relative group">
-        <div className="absolute inset-0 bg-cyan-500/5 blur-[20px] opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: '0 0 20px rgba(6, 182, 212, 0.05)' }} />
         
-        <nav className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#020617]/80 backdrop-blur-3xl border border-white/10 shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
-          <Link href="/" className="px-5 py-2 group flex items-center gap-4 hover:bg-white/5 rounded-xl transition-all">
+        <nav className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#020617]/95 border border-white/10 shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
+          <Link href="/" className="px-5 py-2 group flex items-center gap-4 hover:bg-white/5 rounded-xl transition-colors">
              <div className="w-8 h-8 rounded-lg bg-cyan-400/10 flex items-center justify-center text-cyan-400 overflow-hidden">
                 <img src="/dice.svg" width={20} height={20} alt="Dice Logo" className="object-contain" />
              </div>
@@ -45,7 +49,7 @@ export default function Header() {
                 href={item.path} 
                 onMouseEnter={() => setHovered(item.name)}
                 onMouseLeave={() => setHovered(null)}
-                className="relative px-3 sm:px-5 py-2.5 rounded-xl transition-all group/item"
+                className="relative px-3 sm:px-5 py-2.5 rounded-xl transition-colors group/item"
               >
                 {hovered === item.name && (
                    <motion.div 
@@ -75,6 +79,6 @@ export default function Header() {
           </div>
         </nav>
       </div>
-    </motion.header>
+    </header>
   );
 }
