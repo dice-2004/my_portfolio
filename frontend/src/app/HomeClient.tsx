@@ -39,7 +39,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
     const scrollContainer = scrollRef.current;
     if (scrollContainer) {
       handleTimelineScroll();
-      scrollContainer.addEventListener('scroll', handleTimelineScroll);
+      scrollContainer.addEventListener('scroll', handleTimelineScroll, { passive: true });
       return () => scrollContainer.removeEventListener('scroll', handleTimelineScroll);
     }
   }, []);
@@ -60,17 +60,21 @@ export default function HomeClient({ data }: { data: HomeData }) {
 
   return (
     <main className="min-h-screen font-mono text-white overflow-x-hidden selection:bg-cyan-500 selection:text-black relative">
-      {/* Background System Layers with True 3D Simulation */}
-      <div className="fixed inset-0 bg-[#020617] z-[-3]" />
-      <div className="fixed inset-0 pointer-events-none z-[-2] overflow-hidden contain-strict">
-         <div className="tech-grid-3d" />
+      {/* Background System - Single compositing layer for all fixed backgrounds */}
+      <div className="fixed inset-0 z-[-3] pointer-events-none" style={{ contain: 'strict' }}>
+        {/* Base color */}
+        <div className="absolute inset-0 bg-[#020617]" />
+        {/* 3D Grid */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="tech-grid-3d" />
+        </div>
+        {/* Noise texture */}
+        <div className="absolute inset-0 noise-bg opacity-[0.02]" />
+        {/* Glowing Orbs - Radial gradients for GPU efficiency */}
+        <div className="absolute top-[10%] right-[5%] w-[50vw] h-[50vw] max-w-3xl max-h-3xl rounded-full" style={{ background: 'radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0.05) 40%, transparent 70%)' }} />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-4xl max-h-4xl rounded-full" style={{ background: 'radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.05) 40%, transparent 70%)' }} />
+        <div className="absolute top-[40%] left-[30%] w-[30vw] h-[30vw] max-w-xl max-h-xl rounded-full" style={{ background: 'radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.02) 40%, transparent 70%)' }} />
       </div>
-      <div className="fixed inset-0 noise-bg opacity-[0.02] pointer-events-none z-[-1]" />
-
-      {/* Deep Dark Glowing Orbs for Glass Dark Simulation */}
-      <div className="fixed top-[10%] right-[5%] w-[50vw] h-[50vw] max-w-3xl max-h-3xl bg-blue-600/20 blur-[130px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu" />
-      <div className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-4xl max-h-4xl bg-indigo-600/20 blur-[150px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu" />
-      <div className="fixed top-[40%] left-[30%] w-[30vw] h-[30vw] max-w-xl max-h-xl bg-cyan-500/10 blur-[100px] rounded-full pointer-events-none z-[-1] will-change-transform transform-gpu" />
 
       {/* Frame Decorations */}
       <div className="fixed inset-6 border border-white/5 pointer-events-none hidden md:block z-50">
@@ -97,7 +101,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
 
                <div className="grid grid-cols-1 gap-12 items-end relative mt-20">
                   {/* BACKGROUND LOGO - Moved outside for stability */}
-                  <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero-logo:opacity-60 transition-all duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0 drop-shadow-[0_0_50px_rgba(34,211,238,0.1)] mix-blend-lighten will-change-transform transform-gpu">
+                  <div className="absolute -left-12 md:-left-32 -top-12 md:-top-40 opacity-30 group-hover/hero-logo:opacity-60 transition-opacity duration-[1500ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] pointer-events-none select-none z-0">
                      <img 
                         src="/dice.svg" 
                         className="w-[200px] md:w-[550px] h-[200px] md:h-[550px] object-contain -rotate-12 group-hover/hero-logo:rotate-12 transition-transform duration-[2000ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]" 
@@ -105,11 +109,10 @@ export default function HomeClient({ data }: { data: HomeData }) {
                      />
                   </div>
 
-                  {/* Constrain hover trigger to an appropriately sized container */}
                   <div className="lg:col-span-12 relative flex flex-col items-start mb-16 group/hero-logo w-fit">
                     <div className="relative z-10 pointer-events-none">
                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black leading-tight tracking-tighter flex flex-col items-start gap-1 p-4">
-                          <Typewriter text={"DICE\nPORTFOLIO"} className="text-white drop-shadow-lg leading-[1.1]" delay={0.2} speed={0.1} cursor={true} />
+                          <Typewriter text={"DICE\nPORTFOLIO"} className="text-white leading-[1.1]" delay={0.2} speed={0.1} cursor={true} />
                        </h1>
                     </div>
                   </div>
@@ -117,15 +120,15 @@ export default function HomeClient({ data }: { data: HomeData }) {
            </div>
         </section>
 
-        {/* 2. Structured Content: Information Panes (About) */}
-        <section id="about" className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-64 relative z-10 pt-32 items-start">
+        {/* 2. Structured Content: About */}
+        <section id="about" className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-64 relative z-10 pt-32 items-start" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 800px' }}>
             <header className="col-span-12 mb-8 text-left">
                <span className="text-[10px] font-mono text-cyan-400 mb-4 tracking-[0.4em] uppercase block">[ Operator_Identity ]</span>
                <h2 className="text-5xl md:text-7xl font-display font-black tracking-tighter uppercase whitespace-nowrap flex items-end">
                   <Typewriter text=">_ABOUT" speed={0.1} delay={0.2} />
                </h2>
             </header>
-             <article className="lg:col-span-8 group perspective-[1000px] cursor-default text-left lg:sticky lg:top-32">
+             <article className="lg:col-span-8 group cursor-default text-left lg:sticky lg:top-32">
                 <div className="glass-panel p-10 md:p-14 rounded-none relative overflow-hidden border-white/5">
                    <div className="absolute top-0 right-0 p-8 opacity-[0.01] rotate-12 pointer-events-none mix-blend-screen transition-all duration-1000 group-hover:opacity-[0.03] group-hover:rotate-0">
                       <Cpu size={160} />
@@ -137,8 +140,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
                 </div>
              </article>
 
-            {/* Event Timeline Pane */}
-            <aside className="lg:col-span-4 flex flex-col gap-6 perspective-[1000px] text-left lg:sticky lg:top-32">
+            <aside className="lg:col-span-4 flex flex-col gap-6 text-left lg:sticky lg:top-32">
                <div className="glass-panel p-8 rounded-none relative overflow-hidden">
                   <div className="absolute top-0 right-3 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
                   <div className="absolute top-0 right-5 w-[1px] h-full bg-white/[0.03] pointer-events-none" />
@@ -155,14 +157,10 @@ export default function HomeClient({ data }: { data: HomeData }) {
                       .sort((a, b) => new Date(b.event_date.split(' - ')[0]).getTime() - new Date(a.event_date.split(' - ')[0]).getTime())
                       .map((t) => (
                         <div key={t.id} className="relative pl-8 pb-6 group/item last:pb-0">
-                          {/* Continuous Vertical Line */}
                           <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/5 border-l border-dashed border-white/10 group-hover/item:border-cyan-400/30 transition-colors" />
-                          
-                          {/* Node Marker */}
                           <div className="absolute left-[-4.5px] top-1 w-2 h-2 rounded-full bg-[#020617] border border-white/20 group-hover/item:border-cyan-400 group-hover/item:bg-cyan-400 transition-all duration-500 z-10 box-content" />
-                          
                           <div className="text-[9px] font-mono text-gray-500 mb-2 group-hover/item:text-cyan-400 transition-colors tracking-tighter uppercase whitespace-nowrap">
-                            [{[...new Set(t.event_date.replace(/-/g, '.').split(' . '))].join(' - ')}]
+                            [{t.event_date}]
                           </div>
                           <h4 className="text-sm font-sans font-bold tracking-tight text-gray-400 group-hover/item:text-white transition-colors leading-snug">
                             {t.title}
@@ -175,7 +173,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
         </section>
 
         {/* 3. Collected Artifacts: Works */}
-        <section id="works" className="mb-64 pt-32 border-t border-white/5 relative z-10 text-left">
+        <section id="works" className="mb-64 pt-32 border-t border-white/5 relative z-10 text-left" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 1200px' }}>
            <header className="flex items-end justify-between mb-20">
               <div>
                  <span className="text-[10px] font-mono text-cyan-400 mb-4 tracking-[0.4em] uppercase block">[ Collected_Artifacts ]</span>
@@ -220,7 +218,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
         </section>
 
         {/* 4. Knowledge Graph: Skills */}
-        <section id="skills" className="mb-64 border-t border-white/5 pt-32 relative z-10 text-left">
+        <section id="skills" className="mb-64 border-t border-white/5 pt-32 relative z-10 text-left" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 600px' }}>
            <header className="mb-20">
               <div className="flex items-center gap-4 mb-4">
                  <Activity size={20} className="text-cyan-400" />
@@ -265,7 +263,7 @@ export default function HomeClient({ data }: { data: HomeData }) {
               </h2>
            </header>
 
-           <div className="max-w-2xl mx-auto perspective-[1000px] relative text-center">
+           <div className="max-w-2xl mx-auto relative text-center">
               <div className="glass-panel p-8 md:p-12 rounded-sm relative overflow-hidden group">
                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] aspect-square bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.02),transparent_70%)] pointer-events-none" />
                  

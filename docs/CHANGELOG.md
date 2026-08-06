@@ -81,3 +81,40 @@
     2. **ヘッダー**: `Header.tsx` の左上にあるターミナルアイコンを `dice.svg` に差し替え、ブランドとしての統一感を向上。
     3. **Heroセクション & 自己紹介パネル**: `page.tsx` 内の特大タイトル (DICE ARCHIVE) の直後や、Identificationパネルのアバター箇所にアイコンを配置し、アイデンティティを確立。
   - **制作物タイルのリファイン**: 基本のレイアウトを維持しつつ、親コンテナを先述の `.glass-panel` に変更。ホバー時にライムグリーンに発光し、手前に浮き上がる（Z軸移動）エフェクトを適用し、Glass Dark空間との融合を果たした。
+
+---
+
+### Phase 7: データベース自動復元・シード管理の整備およびクリーンアップ の進捗
+* **ステータス**: 完了
+* **作業内容**:
+  - **DB復元トラブルシュートと原因分析**: データベース喪失時の書き込み権限エラー（Docker root権限問題）およびパス相違（コンテナ内 `/app` 階層ズレ）の原因分析と評価を実施。
+  - **Goネイティブでの自動シード機能の実装**: 外部Python環境に依存せず、Goバックエンド起動時に `001_init.sql` によるスキーマ適用とシードデータの全自動投入（`repository.SeedData()`）を行うアーキテクチャへと刷新。
+  - **シード用データの `backend/seeds/` ディレクトリ一元管理**:
+    - `backend/seeds/` フォルダを新設し、Markdown（`works_unified.md`）と各種JSONデータ（`users.json`, `about.json`, `skills.json`, `timeline.json`）を統合配置。
+    - ハードコーディングされていた初期データ（管理者公開鍵・スキル設定等）を排除し、JSONファイル参照へリファクタリング。
+  - **経歴（Timeline）データの完全整備**:
+    - 学歴、部活動（HxS副部長）、KC3運営、インターン（ゆめみ/Sky）、技育博（サイバーエージェント賞）などの全11項目の経歴情報を `backend/seeds/timeline.json` として構造化し、画面およびDBへの自動初期化を実装完了。
+  - **管理者 Ed25519 鍵ペアの更新**: ユーザーが生成した新 Public Key（`tLn/Pjooba3IOnYxkPq6Uz9fX8AS9YMTvmSIZwfL1pA=`）を `users.json` に適用し、DBへの反映を完了。
+  - **不要・旧世代ファイルのクリーンアップ**:
+    - ルート直下の重複・過去データファイル（`apply_migration_002.py`, `works_unified.md`, `blashup data.md`, `data.md`, `rowdata.md`）および旧Python同期スクリプト群（`sync_unified_works.py` 等）を一括削除し、保守しやすいディレクトリ構造に整理完了。
+
+---
+
+### Phase 8: パフォーマンス最適化 (ISR / SSG化) の進捗
+* **ステータス**: 完了
+* **作業内容**:
+  - **`DYNAMIC_SERVER_USAGE` の解消とISR化**: 
+    - `page.tsx`, `works/[id]/page.tsx`, `works/post-detail-placeholder/[id]/page.tsx` において、`cache: 'no-store'`（アクセスのたびに動的SSR描画を強制する設定）を削除。
+    - `next: { revalidate: 60 }`（60秒間隔のISRキャッシュ）へと最適化。
+  - **表示速度およびサーバー負荷の改善**:
+    - これまでアクセスごとに発生していた Node.js のHTML再生成および Go API / SQLite へのリクエストをカットし、静的キャッシュから即座に表示される爆速レスポンスを実現。
+    - N100 Mini PC の CPU/メモリリソースの消費量を劇的に削減。
+  - **コンテナ起動順序の制御 (Healthcheck)**:
+    - 静的ページ生成（`next build`）実行時の API 接続エラー（`ECONNREFUSED`）を防ぐため、`docker-compose.yml` 内の `backend` サービスに `/api/health` を監視する `healthcheck` を追加。
+    - `wget` のデフォルト (`--spider` による HEAD リクエスト) が Gin の `GET` 限定ルーティングで 404 となっていた原因を分析し、`GET` リクエスト (`-O /dev/null`) を送信するコマンドへ修正完了。
+    - `frontend` の `depends_on` に `condition: service_healthy` を設定し、Go API サーバーが起動完了するまでフロントエンドのビルドを待機させる依存関係を構成。
+  - **Air 設定のモダン化**:
+    - `backend/.air.toml` 内の非推奨パラメータ `bin` を `entrypoint` 形式へ更新し、起動ログの警告を解消。
+  - **経歴（Timeline）の期間表記対応 (A案)**:
+    - シードデータ `backend/seeds/timeline.json` の `event_date` を単発年月から期間表記（例: `2023.04 - 2027.03` や `2025.01 - Present`）へ更新。
+    - `frontend/src/app/HomeClient.tsx` の日付レンダリング部を直接表示に最適化。
