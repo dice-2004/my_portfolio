@@ -15,16 +15,10 @@
 - **Interactive Experience**: Framer Motion による吸い付くようなアニメーションとスムーズな画面遷移。
 - **Bento Grid Layout**: 直感的でスタイリッシュな情報の整理。
 
-### 2. Ed25519 Public Key Authentication
-- **Security**: 一般的なパスワード認証ではなく、Ed25519 公開鍵認証による「パスワードレス管理画面」を自前実装。
-- **Zero-Storage Access**: 秘密鍵をブラウザに保存せず、ログインのたびに `.pem` ファイルを読み込ませるセキュアなインポート方式を採用。
+### 2. File-based Content
+- **No admin screen**: 作品・経歴・自己紹介は Markdown / JSON ファイル（`backend/seeds/`）で管理し、Obsidian や git push で更新します（ファイルの変更を起動時に自動で反映する仕組みは今後追加予定）。ログインが必要な画面を持たないので、守るべき入口がありません。
 
-### 3. Integrated Web Markdown Editor
-- **Content Management**: 管理画面に独自の Markdown エディタを搭載。
-- **Real-time Preview**: 執筆しながら即座に反映を確認できる左右分割プレビュー。
-- **Direct Upload**: 既存の `.md` ファイルを直接アップロードしてコンテンツを更新可能。
-
-### 4. Home Server Deployment (N100 Mini PC)
+### 3. Home Server Deployment (N100 Mini PC)
 - **Edge Computing**: 自宅の N100 Mini PC でフルスタック環境を稼働。
 - **Cloudflare Tunnel**: グローバルIPやポート開放を必要としない、Cloudflare Tunnel によるセキュアな外部公開。
 
@@ -65,7 +59,7 @@ Docker を使用して、ローカル環境で瞬時に開発環境を構築で�
 ## 📖 Development Philosophy
 
 本プロジェクトは、AIアシスタントとの「ペアプログラミング・学習モード」によって開発されています。
-単にコードを生成するのではなく、設計思想のベストプラクティスを議論し、一歩一歩レビューを受けながら実装を進めています。その過程（試行錯誤やエラー解決の経緯）は [docs/CHANGELOG.md](./docs/CHANGELOG.md) に事細かに記録されています。
+単にコードを生成するのではなく、設計思想のベストプラクティスを議論し、一歩一歩レビューを受けながら実装を進めています。その過程（試行錯誤やエラー解決の経緯）は [docs/CHANGELOG.md](./docs/CHANGELOG.md) に記録されています。初期の設計書は [docs/archive/](./docs/archive/) に残しています。
 
 ---
 Created by Dice.

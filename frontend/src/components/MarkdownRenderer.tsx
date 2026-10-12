@@ -20,7 +20,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ol: ({ ...props }) => <ol className="list-decimal list-inside text-gray-300 mb-6 space-y-2 marker:text-pink-500" {...props} />,
           a: ({ ...props }) => <a className="text-purple-400 hover:text-pink-400 border-b border-purple-500/50 hover:border-pink-500 transition" target="_blank" rel="noopener noreferrer" {...props} />,
           blockquote: ({ ...props }) => <blockquote className="border-l-4 border-purple-500 pl-4 py-1 bg-white/5 rounded-r-lg italic text-gray-400 mb-6" {...props} />,
-          code: ({ inline, ...props }: any) => 
+          code: ({ inline, ...props }: React.ComponentProps<"code"> & { inline?: boolean }) => 
             inline ? 
             <code className="bg-black/30 font-mono text-pink-300 px-1.5 py-0.5 rounded text-sm" {...props} /> :
             <pre className="bg-black/50 border border-white/10 p-4 rounded-xl overflow-x-auto mb-6"><code className="font-mono text-sm text-gray-300" {...props} /></pre>,

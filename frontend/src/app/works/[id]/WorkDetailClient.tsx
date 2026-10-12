@@ -40,7 +40,7 @@ export default function WorkDetailClient({ work, id }: { work: Work | null, id: 
 
   // Award Logic
   const awardMatch = work.description.match(/🏆 \*\*AWARD:\*\* (.*)/);
-  let award = awardMatch ? awardMatch[1] : null;
+  const award = awardMatch ? awardMatch[1] : null;
   const cleanDesc = work.description.replace(/🏆 \*\*AWARD:\*\* (.*)\n\n/, "");
 
   return (
