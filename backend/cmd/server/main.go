@@ -1,17 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"github.com/dice/portfolio/internal/handler"
+	"github.com/dice/portfolio/internal/repository"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"os"
-	"github.com/gin-gonic/gin"
-	"fmt"
-	"github.com/gin-contrib/cors"
-	"github.com/dice/portfolio/internal/repository"
-	"github.com/dice/portfolio/internal/handler"
+	"time"
 )
 
-func main(){
+func main() {
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
@@ -20,11 +21,17 @@ func main(){
 
 	repository.InitDB(dbPath)
 	repository.RunMigrations()
-	repository.SeedData()
+	// seeds/ のファイルを DB に反映し、その後も変更を見張る（git pull だけで反映される）
+	repository.SyncContent()
+	interval, err := time.ParseDuration(os.Getenv("CONTENT_SYNC_INTERVAL"))
+	if err != nil || interval <= 0 {
+		interval = 30 * time.Second
+	}
+	repository.WatchContent(interval)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
-	
+
 	// カスタムロガーを追加 (メソッド, URL, ステータス, 処理時間などを出力)
 	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		return fmt.Sprintf("[%s] %s | %3d | %13v | %15s | %-7s %#v\n",
@@ -49,16 +56,16 @@ func main(){
 
 	r.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"message": "Dice's Portfolio API is running!",
 		})
 	})
 
-	r.GET("/api/works",handler.GetWorks)
-	r.GET("/api/works/:id",handler.GetWork)
-	r.GET("/api/skills",handler.GetSkills)
-	r.GET("/api/about",handler.GetAbout)
-	r.GET("/api/timeline",handler.GetAllTimeline)
+	r.GET("/api/works", handler.GetWorks)
+	r.GET("/api/works/:id", handler.GetWork)
+	r.GET("/api/skills", handler.GetSkills)
+	r.GET("/api/about", handler.GetAbout)
+	r.GET("/api/timeline", handler.GetAllTimeline)
 
 	// 静的ファイルの配信
 	r.Static("/api/uploads", "./uploads")
@@ -69,7 +76,6 @@ func main(){
 	}
 
 	log.Printf("Server is running on http://localhost:%s", port)
-
 
 	r.Run(":" + port)
 }

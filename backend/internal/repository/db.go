@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -51,8 +50,6 @@ func RunMigrations() {
 	}
 	log.Println("マイグレーションの実行に成功しました！")
 }
-
-const adminPublicKey = "YLmCdCV5G5zlPw4GFpiFcOshAoqgN4hW4GmW5GAHXew="
 
 type project struct {
 	title       string
@@ -175,113 +172,4 @@ func findSeedFile(filename string) string {
 		}
 	}
 	return ""
-}
-
-func SeedData() {
-	var err error
-
-	// 2. Works Data (works_unified.md)
-	var worksCount int
-	err = DB.QueryRow("SELECT COUNT(*) FROM works").Scan(&worksCount)
-	if err == nil && worksCount == 0 {
-		worksSeedPath := findSeedFile("works_unified.md")
-		if worksSeedPath != "" {
-			content, err := os.ReadFile(worksSeedPath)
-			if err == nil && len(content) > 0 {
-				projects := parseUnifiedMD(string(content))
-				for idx, p := range projects {
-					_, err := DB.Exec(`
-						INSERT INTO works (title, description, image_url, github_url, period, team, tech, display_order)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-					`, p.title, p.description, p.imageURL, p.githubURL, p.period, p.team, p.tech, idx+1)
-					if err != nil {
-						log.Printf("作品データ挿入エラー (%s): %v", p.title, err)
-					}
-				}
-				log.Printf("%d 件の作品データを同期しました！", len(projects))
-			}
-		} else {
-			log.Println("Warning: seeds/works_unified.md が見つからないため作品データのシードをスキップしました。")
-		}
-	}
-
-	// 3. About Data (about.json)
-	var aboutCount int
-	err = DB.QueryRow("SELECT COUNT(*) FROM about").Scan(&aboutCount)
-	if err == nil && aboutCount == 0 {
-		aboutSeedPath := findSeedFile("about.json")
-		if aboutSeedPath != "" {
-			b, err := os.ReadFile(aboutSeedPath)
-			if err == nil {
-				var aboutData struct {
-					Content string `json:"content"`
-				}
-				if err := json.Unmarshal(b, &aboutData); err == nil {
-					_, err = DB.Exec("INSERT INTO about (content) VALUES (?)", aboutData.Content)
-					if err != nil {
-						log.Printf("Aboutデータの初期挿入エラー: %v", err)
-					} else {
-						log.Println("Aboutデータを初期化しました。")
-					}
-				}
-			}
-		}
-	}
-
-	// 4. Skills Data (skills.json)
-	var skillsCount int
-	err = DB.QueryRow("SELECT COUNT(*) FROM skills").Scan(&skillsCount)
-	if err == nil && skillsCount == 0 {
-		skillsSeedPath := findSeedFile("skills.json")
-		if skillsSeedPath != "" {
-			b, err := os.ReadFile(skillsSeedPath)
-			if err == nil {
-				var skills []struct {
-					Name         string `json:"name"`
-					Category     string `json:"category"`
-					Proficiency  int    `json:"proficiency"`
-					DisplayOrder int    `json:"display_order"`
-				}
-				if err := json.Unmarshal(b, &skills); err == nil {
-					for _, s := range skills {
-						_, err = DB.Exec("INSERT INTO skills (name, category, proficiency, display_order) VALUES (?, ?, ?, ?)",
-							s.Name, s.Category, s.Proficiency, s.DisplayOrder)
-						if err != nil {
-							log.Printf("Skillデータ挿入エラー (%s): %v", s.Name, err)
-						}
-					}
-					log.Println("Skillsデータを初期化しました。")
-				}
-			}
-		}
-	}
-
-	// 5. Timeline Data (timeline.json)
-	var timelineCount int
-	err = DB.QueryRow("SELECT COUNT(*) FROM timeline").Scan(&timelineCount)
-	if err == nil && timelineCount == 0 {
-		timelineSeedPath := findSeedFile("timeline.json")
-		if timelineSeedPath != "" {
-			b, err := os.ReadFile(timelineSeedPath)
-			if err == nil {
-				var timelines []struct {
-					Title        string `json:"title"`
-					Description  string `json:"description"`
-					EventDate    string `json:"event_date"`
-					Category     string `json:"category"`
-					DisplayOrder int    `json:"display_order"`
-				}
-				if err := json.Unmarshal(b, &timelines); err == nil {
-					for _, t := range timelines {
-						_, err = DB.Exec("INSERT INTO timeline (title, description, event_date, category, display_order) VALUES (?, ?, ?, ?, ?)",
-							t.Title, t.Description, t.EventDate, t.Category, t.DisplayOrder)
-						if err != nil {
-							log.Printf("Timelineデータ挿入エラー (%s): %v", t.Title, err)
-						}
-					}
-					log.Printf("%d 件のTimeline（経歴）データを初期化しました！", len(timelines))
-				}
-			}
-		}
-	}
 }

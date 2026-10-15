@@ -9,7 +9,7 @@ AIエージェント（Claude Code など）と人間の開発者向けの、こ
 | `frontend/` | Next.js 16 (App Router) + React 19 + Tailwind CSS 4。`frontend/AGENTS.md` も読むこと（Next.js 16 の注意点） |
 | `backend/` | Go (Gin) の読み取り専用 REST API。SQLite (`modernc.org/sqlite`, CGO 不要) |
 | `backend/migrations/` | 起動時に実行される SQL |
-| `backend/seeds/` | 作品・スキル・経歴・自己紹介の元データ。DB が空のときに読み込まれる |
+| `backend/seeds/` | 作品・スキル・経歴・自己紹介の正本。起動時と 30 秒ごとに中身を確かめ、変わったファイルだけ DB に反映する（`internal/repository/content.go`） |
 | `docker/`, `docker-compose.yml` | 本番（N100 + Cloudflare Tunnel）と同じ構成のコンテナ |
 | `docs/archive/` | 初期の設計書。現在の方針とは異なる部分があるので参考程度に |
 

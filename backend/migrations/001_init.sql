@@ -42,14 +42,12 @@ CREATE TABLE IF NOT EXISTS timeline (
 );
 
 
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    public_key TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+-- seeds/ の各ファイルの SHA-256。変わったときだけテーブルを入れ替えるために使う
+CREATE TABLE IF NOT EXISTS content_meta (
+    file TEXT PRIMARY KEY,
+    hash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS auth_challenges (
-    challenge TEXT PRIMARY KEY, -- 挑戦状の文字列自体をIDにすると便利です
-    expires_at DATETIME NOT NULL
-);
+-- 管理画面と一緒に廃止したテーブル
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS auth_challenges;
