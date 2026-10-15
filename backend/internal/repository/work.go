@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"time"
-
 	"github.com/dice/portfolio/internal/model"
 )
 
@@ -60,29 +58,4 @@ func GetWorkByID(id int64) (model.Work, error) {
 		return w, err
 	}
 	return w, nil
-}
-
-func CreateWork(title, description, imageURL, githubURL, period, team, tech string) error {
-	_, err := DB.Exec(
-		"INSERT INTO works (title, description, image_url, github_url, period, team, tech) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		title, description, imageURL, githubURL, period, team, tech,
-	)
-	return err
-}
-
-func UpdateWork(id int64, title, description, imageURL, githubURL, period, team, tech string, now time.Time) error {
-	_, err := DB.Exec(
-		"UPDATE works SET title=?, description=?, image_url=?, github_url=?, period=?, team=?, tech=?, updated_at=? WHERE id=?",
-		title, description, imageURL, githubURL, period, team, tech, now, id,
-	)
-	return err
-}
-
-func DeleteWork(id int64) error {
-	_, err := DB.Exec("DELETE FROM works WHERE id=?", id)
-	return err
-}
-func UpdateWorkSortOrder(id int64, order int) error {
-	_, err := DB.Exec("UPDATE works SET display_order=? WHERE id=?", order, id)
-	return err
 }

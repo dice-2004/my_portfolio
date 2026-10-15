@@ -16,7 +16,7 @@
 - **Bento Grid Layout**: 直感的でスタイリッシュな情報の整理。
 
 ### 2. File-based Content
-- **No admin screen**: 作品・経歴・自己紹介は Markdown / JSON ファイル（`backend/seeds/`）で管理し、Obsidian や git push で更新します（ファイルの変更を起動時に自動で反映する仕組みは今後追加予定）。ログインが必要な画面を持たないので、守るべき入口がありません。
+- **No admin screen**: 作品・経歴・自己紹介は Markdown / JSON ファイル（`backend/seeds/`）で管理し、Obsidian や git push で更新します。バックエンドが 30 秒ごとにファイルの変更を確かめて DB に反映するので、再起動は要りません。ログインが必要な画面を持たないので、守るべき入口がありません。
 
 ### 3. Home Server Deployment (N100 Mini PC)
 - **Edge Computing**: 自宅の N100 Mini PC でフルスタック環境を稼働。
