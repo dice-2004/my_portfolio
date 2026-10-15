@@ -178,31 +178,7 @@ func findSeedFile(filename string) string {
 }
 
 func SeedData() {
-	// 1. Users Data (users.json)
-	var userCount int
-	err := DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
-	if err == nil && userCount == 0 {
-		userSeedPath := findSeedFile("users.json")
-		if userSeedPath != "" {
-			b, err := os.ReadFile(userSeedPath)
-			if err == nil {
-				var users []struct {
-					ID        string `json:"id"`
-					Name      string `json:"name"`
-					PublicKey string `json:"public_key"`
-				}
-				if err := json.Unmarshal(b, &users); err == nil {
-					for _, u := range users {
-						_, err := DB.Exec("INSERT INTO users (id, name, public_key) VALUES (?, ?, ?)", u.ID, u.Name, u.PublicKey)
-						if err != nil {
-							log.Printf("ユーザー初期化エラー (%s): %v", u.ID, err)
-						}
-					}
-					log.Println("管理者ユーザーデータを初期化しました。")
-				}
-			}
-		}
-	}
+	var err error
 
 	// 2. Works Data (works_unified.md)
 	var worksCount int

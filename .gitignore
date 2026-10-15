@@ -22,8 +22,6 @@ frontend/.next/
 frontend/out/
 
 # AIアシスタント/特定ツール関連
-frontend/AGENTS.md
-frontend/CLAUDE.md
 frontend/replace.js
 
 # TypeScript
