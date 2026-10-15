@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/dice/portfolio/internal/ai"
 	"github.com/dice/portfolio/internal/handler"
 	"github.com/dice/portfolio/internal/repository"
 	"github.com/gin-contrib/cors"
@@ -28,6 +29,14 @@ func main() {
 		interval = 30 * time.Second
 	}
 	repository.WatchContent(interval)
+
+	gemini := ai.NewGeminiFromEnv()
+	if !gemini.Enabled() {
+		log.Println("GEMINI_API_KEY が無いので、AI チャットは無効です")
+	}
+	index := &ai.Index{DB: repository.DB, Gemini: gemini, Collect: collectChunks}
+	watchIndex(index, interval)
+	chat := &handler.Chat{Gemini: gemini, Index: index, Limit: handler.NewLimiterFromEnv()}
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -66,6 +75,8 @@ func main() {
 	r.GET("/api/skills", handler.GetSkills)
 	r.GET("/api/about", handler.GetAbout)
 	r.GET("/api/timeline", handler.GetAllTimeline)
+	r.GET("/api/chat/status", chat.Status)
+	r.POST("/api/chat", chat.Post)
 
 	// 静的ファイルの配信
 	r.Static("/api/uploads", "./uploads")
