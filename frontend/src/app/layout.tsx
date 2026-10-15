@@ -1,79 +1,76 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Outfit, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { IBM_Plex_Sans_JP, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { CliProvider } from "@/components/cli/CliContext";
+import CliPanel from "@/components/cli/CliPanel";
+import SiteShell from "@/components/SiteShell";
+import { getPortfolio } from "@/lib/portfolio";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const plexJp = IBM_Plex_Sans_JP({
+  variable: "--font-plex-jp",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
-
-const playfairDisplay = Playfair_Display({
-  variable: "--font-serif",
-  subsets: ["latin"],
-});
+const SITE_DESCRIPTION =
+  "大阪工業大学 情報系の学生エンジニア Daisuke（dice）のポートフォリオ。ハッカソンでの受賞作から、C言語の対戦AI、Next.js のWebアプリまで。";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://portfolio.dice-ke.tech"),
   title: {
-    default: "DICE. // Portfolio - Digital Archive & Engineering",
-    template: "%s | DICE."
+    default: "Daisuke (dice) のポートフォリオ",
+    template: "%s | dice",
   },
-  description: "Daisuke's digital portfolio showcasing technical minimalism, precision engineering, and high-performance web development.",
-  keywords: ["Portfolio", "Daisuke", "Full Stack Developer", "Software Engineer", "Go", "Next.js", "Design"],
+  description: SITE_DESCRIPTION,
   authors: [{ name: "Daisuke" }],
   creator: "Daisuke",
   openGraph: {
     type: "website",
     locale: "ja_JP",
     url: "https://portfolio.dice-ke.tech",
-    title: "DICE. // Portfolio",
-    description: "Digital Archive & High-Performance Engineering Portfolio",
-    siteName: "DICE. Portfolio",
+    title: "Daisuke (dice) のポートフォリオ",
+    description: SITE_DESCRIPTION,
+    siteName: "dice portfolio",
   },
   twitter: {
     card: "summary_large_image",
-    title: "DICE. // Portfolio",
-    description: "Digital Archive & High-Performance Engineering Portfolio",
+    title: "Daisuke (dice) のポートフォリオ",
+    description: SITE_DESCRIPTION,
     creator: "@_dice_ke",
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  icons: {
-    icon: "/dice.svg",
-  },
+  robots: { index: true, follow: true },
+  icons: { icon: "/dice.svg" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // CLI パネルの即答コマンド（ls works など）用。page と同じ fetch なので Next.js のキャッシュで重複しない。
+  const portfolio = await getPortfolio();
+
   return (
-    <html
-      lang="ja"
-      className={`${spaceGrotesk.variable} ${outfit.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col font-sans selection-neon relative">
-        <div className="noise" />
-        <Header />
-        {/* Headerが固定(fixed)なので、上部にパディングを設けてコンテンツが被らないようにします */}
-        <main className="flex-grow pt-20 relative z-0">
-          {children}
-        </main>
-        <Footer />
+    <html lang="ja" className={`${plexJp.variable} ${jetbrains.variable} antialiased`}>
+      <body className="min-h-dvh">
+        <CliProvider>
+          <SiteShell>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </SiteShell>
+          <CliPanel portfolio={portfolio} />
+        </CliProvider>
       </body>
     </html>
   );
