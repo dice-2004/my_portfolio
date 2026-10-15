@@ -1,233 +1,122 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-@theme {
-  --color-cyan-glow: #22d3ee;
-  --font-sans: var(--font-outfit), ui-sans-serif, system-ui;
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui;
-}
-
+/*
+ * デザイントークン（単一のダークテーマ）
+ * 文字色はすべて --bg に対してコントラスト比 4.5:1 以上。
+ *   --fg   #dce5de ≈ 14:1 / --dim #8f9c95 ≈ 6.4:1 / --accent #e9b44c ≈ 9.4:1
+ */
 :root {
-  --color-cyan-glow: #22d3ee;
-  --background: #020617;
-  --foreground: #ffffff;
+  --bg: #101311;
+  --surface: #161a18;
+  --panel: #0a0c0b;
+  --fg: #dce5de;
+  --dim: #8f9c95;
+  --line: #2a322d;
+  --accent: #e9b44c;
+  --ok: #7fd49b;
+  --panel-w: min(560px, 42vw);
+  color-scheme: dark;
 }
 
-body, html {
-  background-color: #020617; /* Very deep slate/blue for Glass Dark */
-  color: white;
-  min-height: 100vh;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-fg: var(--fg);
+  --color-dim: var(--dim);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-plex-jp), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.8;
   overflow-x: hidden;
-  font-feature-settings: "ss01", "ss02", "cv01", "cv02";
 }
 
-/* Base scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #020617;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.2);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.5);
-}
-
-.noise-bg {
-  /* Lightweight CSS noise pattern - no SVG filter processing required */
-  background-image:
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 3px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 5px),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, transparent 1px, transparent 7px);
-  background-size: 4px 4px, 5px 5px, 7px 7px;
-}
-
-/* True 3D Simulation Grid (Dynamic) */
-.tech-grid-3d {
-  position: absolute;
-  bottom: 0; 
-  left: -25vw; 
-  width: 150vw; 
-  height: 120vh;
-  background-image: 
-    linear-gradient(rgba(34, 211, 238, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.15) 1px, transparent 1px);
-  background-size: 60px 60px;
-  transform: perspective(1000px) rotateX(70deg) translateY(0) translateZ(0);
-  transform-origin: bottom center;
-  mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%);
-  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%);
-  pointer-events: none;
-  animation: none !important;
-  -webkit-animation: none !important;
-  contain: strict;
-}
-
-/* High Precision Grid for Works */
-.grid-bg {
-  background-color: rgba(255, 255, 255, 0.02);
-  display: grid;
-  gap: 1px;
-}
-
-/* Terminal Cursor */
-.terminal-cursor::after {
-  content: '_';
-  animation: blink 1s step-start infinite;
-  color: var(--color-cyan-glow);
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Typewriter Cursor (CSS-only, no JS animation overhead) */
-@keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-.animate-cursor-blink {
-  animation: cursor-blink 0.8s linear infinite;
-}
-
-/* Header entrance animation (CSS-only, replaces framer-motion initial/animate) */
-@keyframes header-enter {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-.animate-header-enter {
-  animation: header-enter 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-/* Custom Selection */
 ::selection {
-  background: var(--color-cyan-glow);
-  color: #000;
+  background: var(--accent);
+  color: var(--panel);
 }
 
-/* Typography Scale & Weight */
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  letter-spacing: -0.05em;
-  font-weight: 900;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-/* Layout Utilities */
-.pane-shadow {
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
-/* Glass Dark Component - Uses higher opacity background instead of GPU-heavy backdrop-filter */
-.glass-panel {
-  background: rgba(2, 6, 23, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  contain: paint;
-}
-.glass-panel::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.01) 0%, transparent 100%);
-  pointer-events: none;
+/* ---- CLI パネルを開いたとき、PC では本文を左に詰めて横並びにする ---- */
+@media (min-width: 1024px) {
+  .site-shell {
+    transition: padding-right 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .site-shell[data-cli-open="true"] {
+    padding-right: var(--panel-w);
+  }
 }
 
-/* Static Pane */
-.glass-panel {
-  transition: opacity 0.5s ease;
+.cli-panel {
+  transform: translateX(102%);
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cli-panel[data-open="true"] {
+  transform: none;
 }
 
-/* Interactive Card - Uses higher opacity background instead of GPU-heavy backdrop-filter */
-.glass-panel-interactive {
-  background: rgba(2, 6, 23, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  cursor: pointer;
-  contain: paint;
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
 }
-.glass-panel-interactive::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%);
-  pointer-events: none;
-}
-.glass-panel-interactive:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1),
-              0 0 30px rgba(34, 211, 238, 0.1),
-              0 20px 50px -12px rgba(0, 0, 0, 0.8);
-  transform: translateY(-2px);
+.caret {
+  animation: caret-blink 1.1s steps(1) infinite;
 }
 
-/* Vertical Scanline Beam */
-@keyframes scan-v {
-  0% { transform: translateY(-100%); opacity: 0; }
-  20% { opacity: 0.8; }
-  80% { opacity: 0.8; }
-  100% { transform: translateY(400%); opacity: 0; }
-}
-.animate-scan-v {
-  animation: scan-v 4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-}
-
-@keyframes flicker {
-  0% { opacity: 0.8; }
-  10% { opacity: 0.1; }
-  20% { opacity: 0.9; }
-  30% { opacity: 0.2; }
-  40% { opacity: 0.7; }
-  50% { opacity: 0.4; }
-  60% { opacity: 0.9; }
-  70% { opacity: 0.1; }
-  80% { opacity: 0.8; }
-  90% { opacity: 0.3; }
-  100% { opacity: 0.9; }
-}
-.animate-flicker {
-  animation: flicker 0.15s infinite;
+@media (prefers-reduced-motion: reduce) {
+  .site-shell,
+  .cli-panel {
+    transition: none;
+  }
+  .caret {
+    animation: none;
+  }
 }
 
-/* Performance Utilities */
-.will-change-transform {
-  will-change: transform;
+/* ---- 作品詳細などの Markdown 本文 ---- */
+.prose-site {
+  --tw-prose-body: var(--fg);
+  --tw-prose-headings: var(--fg);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--fg);
+  --tw-prose-bullets: var(--dim);
+  --tw-prose-counters: var(--dim);
+  --tw-prose-quotes: var(--dim);
+  --tw-prose-quote-borders: var(--line);
+  --tw-prose-code: var(--fg);
+  --tw-prose-hr: var(--line);
+  --tw-prose-th-borders: var(--line);
+  --tw-prose-td-borders: var(--line);
 }
-.transform-gpu {
-  transform: translateZ(0);
+.prose-site h3 {
+  font-size: 1rem;
+  color: var(--accent);
+  margin-top: 2em;
 }
-
-
-/* Custom Calendar Picker Icon styling */
-.custom-calendar-picker::-webkit-calendar-picker-indicator {
-  filter: invert(80%) sepia(50%) saturate(1000%) hue-rotate(140deg) brightness(100%) contrast(100%);
-  cursor: pointer;
-}
-
-/* Premium Timeline Scroll Area */
-.timeline-scroll-mask {
-  mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 8%, black 92%, transparent);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 2px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.1);
-  border-radius: 1px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.3);
+.prose-site h3:first-child {
+  margin-top: 0;
 }
