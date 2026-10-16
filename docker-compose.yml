@@ -18,7 +18,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - CHAT_DAILY_LIMIT=${CHAT_DAILY_LIMIT:-400}
       # Obsidian のノートも材料にするとき。Vault を下の volumes でマウントし、そのパスを書く
-      # （Vault の assets/obsidianignore か obsidianignore が無いと、安全のため読み込まない）
+      # （Vault の assets/obsidianignore か obsidianignore（.md 付きでも可）が無いと、安全のため読み込まない）
       - OBSIDIAN_VAULT=${OBSIDIAN_VAULT_IN_CONTAINER:-}
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8080/api/health || exit 1"]

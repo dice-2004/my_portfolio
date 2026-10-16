@@ -6,7 +6,8 @@
 #   VAULT=/path/to/vault DEST=portfolio-sync@10.10.10.52:/srv/portfolio-vault ./sync-obsidian.sh
 #   （DEST をローカルのパスにすると、送らずに手元へコピーして中身を確かめられる）
 #
-# 除外リストは Vault の assets/obsidianignore（無ければ obsidianignore）。
+# 除外リストは Vault の assets/obsidianignore（無ければ Vault 直下の obsidianignore）。
+# Obsidian でノートとして書けるよう、どちらも .md 付きでもよい。
 # 書き方は .gitignore と同じ（先頭 / は Vault 直下、末尾 / はフォルダ、* ? ** が使える）。
 # 否定（! で始まる行）は、バックエンドと同じく無視する（＝除外されたまま。安全側）。
 # 除外リストが見つからないときは何も送らずに終わる。
@@ -17,11 +18,11 @@ set -euo pipefail
 VAULT="${VAULT%/}"
 
 ignore=""
-for f in "$VAULT/assets/obsidianignore" "$VAULT/obsidianignore"; do
+for f in "$VAULT/assets/obsidianignore" "$VAULT/assets/obsidianignore.md" "$VAULT/obsidianignore" "$VAULT/obsidianignore.md"; do
   if [[ -f "$f" ]]; then ignore="$f"; break; fi
 done
 if [[ -z "$ignore" ]]; then
-  echo "obsidianignore が見つからないので送りません（$VAULT/assets/obsidianignore か $VAULT/obsidianignore を置いてください）" >&2
+  echo "obsidianignore が見つからないので送りません（$VAULT/assets/obsidianignore(.md) か $VAULT/obsidianignore(.md) を置いてください）" >&2
   exit 1
 fi
 

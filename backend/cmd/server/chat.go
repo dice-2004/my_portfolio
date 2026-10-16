@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dice/portfolio/internal/ai"
@@ -55,9 +56,14 @@ func collectChunks() ([]ai.Chunk, error) {
 	return chunks, nil
 }
 
-// OBSIDIAN_IGNORE_FILE が無ければ Vault の assets/obsidianignore、次に obsidianignore を探す。
+// OBSIDIAN_IGNORE_FILE が無ければ Vault の assets/obsidianignore、次に Vault 直下の obsidianignore を探す。
+// Obsidian でノートとして書けるよう、それぞれ .md 付きでもよい。
+// 除外リストのノート自体は AI の材料にしない。
 func loadObsidianIgnore(vault string) (*ai.Ignore, error) {
-	paths := []string{filepath.Join(vault, "assets", "obsidianignore"), filepath.Join(vault, "obsidianignore")}
+	var paths []string
+	for _, dir := range []string{filepath.Join(vault, "assets"), vault} {
+		paths = append(paths, filepath.Join(dir, "obsidianignore"), filepath.Join(dir, "obsidianignore.md"))
+	}
 	if p := os.Getenv("OBSIDIAN_IGNORE_FILE"); p != "" {
 		paths = []string{p}
 	}
@@ -65,6 +71,9 @@ func loadObsidianIgnore(vault string) (*ai.Ignore, error) {
 	for _, p := range paths {
 		var ig *ai.Ignore
 		if ig, err = ai.LoadIgnore(p); err == nil {
+			if rel, relErr := filepath.Rel(vault, p); relErr == nil && !strings.HasPrefix(rel, "..") {
+				ig.Add("/" + filepath.ToSlash(rel))
+			}
 			return ig, nil
 		}
 	}
