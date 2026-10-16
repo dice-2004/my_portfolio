@@ -1,0 +1,87 @@
+# Obsidian のノートを AI チャットに使う
+
+Vault は private-appserver（10.10.10.51）にあり、アプリは public-appserver（10.10.10.52）で動く。
+公開側には `obsidianignore` で除外されていないノートだけを置きたいので、private 側から rsync で送る。
+
+```
+ノート PC ──(Obsidian の同期)──> private-appserver の Vault
+                                     │ scripts/sync-obsidian.sh（cron で 10 分ごと）
+                                     │ ・obsidianignore に当たるパスと .obsidian などは送らない
+                                     ▼
+                           public-appserver の /srv/portfolio-vault
+                                     │ docker compose で /vault に読み取り専用でマウント
+                                     ▼
+                           バックエンドが 30 秒ごとに読み、変わったノートだけ埋め込みを作る
+```
+
+## 1. public-appserver（受け取る側）
+
+送られてくるだけの専用ユーザーを作り、そのユーザーは `/srv/portfolio-vault` への rsync しかできないようにする。
+
+```bash
+sudo useradd --system --create-home --shell /bin/sh portfolio-sync
+sudo mkdir -p /srv/portfolio-vault
+sudo chown portfolio-sync: /srv/portfolio-vault
+sudo apt install -y rsync          # rrsync も一緒に入る（Debian 12 / Ubuntu 24.04 以降）
+```
+
+`/home/portfolio-sync/.ssh/authorized_keys` に、手順 2 で作る公開鍵を 1 行で書く。
+`command=` と `restrict` で、この鍵ではシェルも転送もできず、決めたフォルダへの rsync だけになる。
+
+```
+command="rrsync /srv/portfolio-vault",restrict ssh-ed25519 AAAA...（公開鍵） portfolio-sync
+```
+
+リポジトリ直下の `.env` に追記して、`docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
+
+```bash
+# .env
+OBSIDIAN_VAULT_IN_CONTAINER=/vault
+```
+
+```yaml
+# docker-compose.yml（backend の volumes）
+      - /srv/portfolio-vault:/vault:ro
+```
+
+## 2. private-appserver（送る側）
+
+```bash
+sudo apt install -y rsync
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/portfolio_sync -C portfolio-sync
+cat ~/.ssh/portfolio_sync.pub     # これを手順 1 の authorized_keys に貼る
+```
+
+まずは送り先を手元のフォルダにして、何が送られるかを確かめる。
+
+```bash
+VAULT=/path/to/vault DEST=/tmp/vault-preview ./scripts/sync-obsidian.sh
+find /tmp/vault-preview -type f | less    # 非公開のノートが入っていないこと
+```
+
+問題なければ public-appserver へ送る。rrsync を使うので、送り先のパスは `:` だけでよい。
+
+```bash
+VAULT=/path/to/vault DEST=portfolio-sync@10.10.10.52: \
+RSYNC_SSH="ssh -i $HOME/.ssh/portfolio_sync" ./scripts/sync-obsidian.sh
+```
+
+cron に登録する（`crontab -e`）。
+
+```
+*/10 * * * * VAULT=/path/to/vault DEST=portfolio-sync@10.10.10.52: RSYNC_SSH="ssh -i $HOME/.ssh/portfolio_sync" /path/to/my_portfolio/scripts/sync-obsidian.sh >>$HOME/sync-obsidian.log 2>&1
+```
+
+## 送られるもの・送られないもの
+
+- 送る: `.md` ファイルと、除外リスト（`assets/obsidianignore`）そのもの
+- 送らない: `obsidianignore` に当たるパス、`.obsidian` `.trash` などの `.` で始まるもの、画像などの `.md` 以外
+- Vault からノートを消したり、除外リストに足したりすると、次の同期で public 側からも消える（`--delete --delete-excluded`）
+- 除外リストが見つからないときは何も送らない。バックエンドも、除外リストが無い Vault は読まない
+- `!` で始まる行（除外の取り消し）には対応していない。その行は無視され、除外されたままになる
+
+## うまくいっているかの確かめ方
+
+- public 側: `docker compose logs backend | grep 埋め込み` で「AI 用の埋め込みを N 件作りました」が出る
+- 無料枠を守るため、埋め込みは 30 秒ごとに約 1.2 万文字ずつ作る。ノートが多いと、全部そろうまで時間がかかる（例: 100 万文字なら約 40 分）
+- パネルでノートの内容について質問する。Obsidian のノートは非公開なので、回答の下の参照リンクには出ない

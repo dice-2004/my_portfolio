@@ -9,7 +9,7 @@ services:
       - "8031:8080"
     volumes:
       - ./backend:/app
-      # - /path/to/obsidian-vault:/vault:ro   # 使うときは OBSIDIAN_VAULT_IN_CONTAINER=/vault も .env に
+      # - /srv/portfolio-vault:/vault:ro   # Obsidian を使うとき。手順は docs/obsidian-sync.md
     environment:
       - PORT=8080
       - DB_PATH=/app/data/portfolio.db

@@ -12,6 +12,7 @@ AIエージェント（Claude Code など）と人間の開発者向けの、こ
 | `backend/seeds/` | 作品・スキル・経歴・自己紹介の正本。起動時と 30 秒ごとに中身を確かめ、変わったファイルだけ DB に反映する（`internal/repository/content.go`） |
 | `backend/internal/ai/` | AI チャット。Gemini API クライアント、資料のチャンク分割、埋め込みの保存と検索（SQLite の `chunks`）、回答の生成 |
 | `backend/seeds/knowledge/` | （任意）サイトには出さないが AI チャットに答えさせたい補足の Markdown |
+| `scripts/sync-obsidian.sh` | private-appserver の Vault から、obsidianignore で除外されていないノートだけを public-appserver へ rsync する（手順は `docs/obsidian-sync.md`） |
 | `docker/`, `docker-compose.yml` | 本番（N100 + Cloudflare Tunnel）と同じ構成のコンテナ |
 | `docs/archive/` | 初期の設計書。現在の方針とは異なる部分があるので参考程度に |
 
