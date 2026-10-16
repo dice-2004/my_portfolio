@@ -162,7 +162,7 @@ func (ix *Index) Refresh(ctx context.Context) (pending int, err error) {
 }
 
 func (ix *Index) load(ctx context.Context) error {
-	rows, err := ix.DB.QueryContext(ctx, "SELECT source, title, url, body, embedding FROM chunks")
+	rows, err := ix.DB.QueryContext(ctx, "SELECT source, title, url, body, embedding FROM chunks ORDER BY rowid")
 	if err != nil {
 		return err
 	}
@@ -214,6 +214,17 @@ func describe(err error) string {
 		}
 	}
 	return "Gemini に接続できません"
+}
+
+// All は埋め込み済みのチャンクを、保存されている順に返す。
+func (ix *Index) All() []Chunk {
+	ix.mu.RLock()
+	defer ix.mu.RUnlock()
+	out := make([]Chunk, len(ix.entries))
+	for i, e := range ix.entries {
+		out[i] = e.Chunk
+	}
+	return out
 }
 
 // Len は検索できるチャンクの数。

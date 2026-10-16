@@ -115,7 +115,7 @@ func fakeGemini(t *testing.T, embedCalls *int32) *Gemini {
 				http.Error(w, "資料が渡っていない", http.StatusBadRequest)
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{map[string]any{"text": " dice は Go を使います。 "}}}}}})
+			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{map[string]any{"text": " dice は Go を使います。\n参照: 1 "}}}}}})
 		default:
 			http.NotFound(w, r)
 		}
@@ -185,5 +185,24 @@ func TestIndexWithoutKeyEmbedsNothing(t *testing.T) {
 	pending, err := ix.Refresh(context.Background())
 	if err != nil || pending != 1 || ix.Len() != 0 {
 		t.Fatalf("pending=%d len=%d err=%v", pending, ix.Len(), err)
+	}
+}
+
+func TestSplitRefs(t *testing.T) {
+	docs := []Chunk{
+		{Title: "作品A", URL: "/works/1"},
+		{Title: "メモ", Source: "obsidian/x.md"},
+		{Title: "作品A の続き", URL: "/works/1"},
+		{Title: "経歴", URL: "/#about"},
+	}
+	answer, sources := splitRefs("dice は A を作りました。\n参照: 1, 2, 3, 4, 9", docs)
+	if answer != "dice は A を作りました。" {
+		t.Fatalf("answer = %q", answer)
+	}
+	if len(sources) != 2 || sources[0].URL != "/works/1" || sources[1].URL != "/#about" {
+		t.Fatalf("sources = %+v", sources)
+	}
+	if _, s := splitRefs("資料には載っていません。\n参照: なし", docs); len(s) != 0 {
+		t.Fatalf("sources for なし = %+v", s)
 	}
 }
