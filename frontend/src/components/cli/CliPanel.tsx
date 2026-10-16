@@ -10,7 +10,7 @@ import { runCommand, type Line } from "./commands";
 
 const VERSION = "v0.2.0";
 
-type AiStatus = { enabled: boolean; ready: boolean; model: string; remaining: number };
+type AiStatus = { enabled: boolean; ready: boolean; model: string; remaining: number; problem?: string };
 type Turn = { role: "user" | "assistant"; text: string };
 
 function DiceMark() {
@@ -110,7 +110,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     if (result.ask) void ask(result.ask);
   };
 
-  const aiLabel = !ai ? "確認中…" : ai.ready ? `Gemini（${ai.model}）` : ai.enabled ? "資料を準備中" : "準備中（コマンドは使えます）";
+  const aiLabel = !ai ? "確認中…" : ai.ready ? `Gemini（${ai.model}）` : ai.enabled ? (ai.problem ? `使えません（${ai.problem}）` : "資料を準備中") : "準備中（コマンドは使えます）";
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;

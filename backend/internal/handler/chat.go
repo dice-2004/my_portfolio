@@ -41,6 +41,7 @@ func (h *Chat) Status(c *gin.Context) {
 		"ready":     h.Gemini.Enabled() && h.Index.Len() > 0,
 		"model":     h.Gemini.ChatModel,
 		"remaining": h.Limit.Remaining(),
+		"problem":   h.Index.Problem(),
 	})
 }
 
@@ -50,7 +51,11 @@ func (h *Chat) Post(c *gin.Context) {
 		return
 	}
 	if h.Index.Len() == 0 {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "回答に使う資料を準備しています。少し待ってからもう一度試してください。"})
+		msg := "回答に使う資料を準備しています。少し待ってからもう一度試してください。"
+		if p := h.Index.Problem(); p != "" {
+			msg = "AI の準備ができていません（" + p + "）。"
+		}
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": msg})
 		return
 	}
 

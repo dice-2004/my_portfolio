@@ -3,7 +3,6 @@ module github.com/dice/portfolio
 go 1.26.1
 
 require (
-	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.12.0
 	modernc.org/sqlite v1.47.0
 )

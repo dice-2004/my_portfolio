@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"log"
 	"math"
 	"sort"
@@ -32,6 +33,7 @@ type Index struct {
 	entries []entry
 	loaded  string // メモリに載っている集合のハッシュ。変わったときだけ読み直す
 	lastErr string
+	problem string // 画面に出す、埋め込みが作れない理由
 }
 
 func (ix *Index) hashOf(c Chunk) string {
@@ -105,8 +107,10 @@ func (ix *Index) Refresh(ctx context.Context) (pending int, err error) {
 		vecs, err := ix.Gemini.EmbedDocuments(ctx, docs)
 		if err != nil {
 			ix.logOnce("埋め込みの作成に失敗しました（次回また試します）: " + err.Error())
+			ix.setProblem(describe(err))
 		} else {
 			ix.logOnce("")
+			ix.setProblem("")
 			tx, err := ix.DB.BeginTx(ctx, nil)
 			if err != nil {
 				return 0, err
@@ -181,6 +185,35 @@ func (ix *Index) load(ctx context.Context) error {
 	ix.entries = entries
 	ix.mu.Unlock()
 	return nil
+}
+
+func (ix *Index) setProblem(p string) {
+	ix.mu.Lock()
+	ix.problem = p
+	ix.mu.Unlock()
+}
+
+// Problem は埋め込みが作れていない理由（無ければ空）。
+func (ix *Index) Problem() string {
+	ix.mu.RLock()
+	defer ix.mu.RUnlock()
+	return ix.problem
+}
+
+// describe は Gemini のエラーを、サイトの持ち主が対処できる言葉にする。
+func describe(err error) string {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.Status {
+		case 400, 401, 403:
+			return "Gemini API キーが正しくないか、使えない状態です"
+		case 404:
+			return "Gemini のモデル名が見つかりません"
+		case 429:
+			return "Gemini の無料枠の上限に達しています"
+		}
+	}
+	return "Gemini に接続できません"
 }
 
 // Len は検索できるチャンクの数。

@@ -79,10 +79,19 @@ func (g *Gemini) post(ctx context.Context, path string, in, out any) error {
 		return err
 	}
 	if res.StatusCode/100 != 2 {
-		if len(b) > 300 {
-			b = b[:300]
+		var e struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
 		}
-		return &APIError{Status: res.StatusCode, Body: string(b)}
+		msg := string(b)
+		if json.Unmarshal(b, &e) == nil && e.Error.Message != "" {
+			msg = e.Error.Message
+		}
+		if r := []rune(msg); len(r) > 300 {
+			msg = string(r[:300])
+		}
+		return &APIError{Status: res.StatusCode, Body: msg}
 	}
 	return json.Unmarshal(b, out)
 }
