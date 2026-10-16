@@ -18,6 +18,8 @@ Vault は private-appserver（10.10.10.51）にあり、アプリは public-apps
 
 送られてくるだけの専用ユーザーを作り、そのユーザーは `/srv/portfolio-vault` への rsync しかできないようにする。
 
+ここはどれも管理者の作業なので、いつものユーザーで `sudo` を付けて実行する（`portfolio-sync` には sudo の権限を与えない）。
+
 ```bash
 sudo useradd --system --create-home --shell /bin/sh portfolio-sync
 sudo mkdir -p /srv/portfolio-vault
@@ -30,6 +32,14 @@ sudo apt install -y rsync          # rrsync も一緒に入る（Debian 12 / Ubu
 
 ```
 command="rrsync /srv/portfolio-vault",restrict ssh-ed25519 AAAA...（公開鍵） portfolio-sync
+```
+
+ファイルの持ち主は `portfolio-sync` にして、本人以外が書き換えられないようにする（SSH はそうでないと鍵を使わない）。
+
+```bash
+sudo -u portfolio-sync mkdir -p -m 700 /home/portfolio-sync/.ssh
+sudo -u portfolio-sync nano /home/portfolio-sync/.ssh/authorized_keys   # 上の 1 行を貼る
+sudo chmod 600 /home/portfolio-sync/.ssh/authorized_keys
 ```
 
 リポジトリ直下の `.env` に追記して、`docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
