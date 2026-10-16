@@ -18,7 +18,7 @@ Vault は private-appserver（10.10.10.51）にあり、アプリは public-apps
 
 送られてくるだけの専用ユーザーを作り、そのユーザーは `/srv/portfolio-vault` への rsync しかできないようにする。
 
-ここはどれも管理者の作業なので、いつものユーザーで `sudo` を付けて実行する（`portfolio-sync` には sudo の権限を与えない）。
+ここはどれも管理者の作業なので、root の権限で実行する。ふだんの管理者ユーザーなら下のとおり `sudo` を付け、root で直接ログインしているなら `sudo` を外す（Proxmox の LXC は sudo が入っていないことも多い）。`portfolio-sync` には sudo の権限を与えない。
 
 ```bash
 sudo useradd --system --create-home --shell /bin/sh portfolio-sync
@@ -42,7 +42,9 @@ sudo -u portfolio-sync nano /home/portfolio-sync/.ssh/authorized_keys   # 上の
 sudo chmod 600 /home/portfolio-sync/.ssh/authorized_keys
 ```
 
-リポジトリ直下の `.env` に追記して、`docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
+sudo が無いときは、`sudo -u portfolio-sync` を `runuser -u portfolio-sync --` に置き換える（例: `runuser -u portfolio-sync -- mkdir -p -m 700 /home/portfolio-sync/.ssh`）。
+
+`docker compose` を動かしているユーザーで、リポジトリ直下の `.env` に追記して、`docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
 
 ```bash
 # .env
