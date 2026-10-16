@@ -77,7 +77,7 @@ cat /root/.ssh/portfolio_sync.pub     # これを手順 1 の authorized_keys �
 
 ### ② 送るスクリプトを置く
 
-リポジトリは clone せず、スクリプト 1 本だけを置く。
+リポジトリは clone せず、スクリプト 1 本だけを置く（main にスクリプトが入ってから。それまでは URL の `main` を `claude/project-thread-wqqjji` にする）。
 
 ```bash
 mkdir -p /opt/docker/obsidian-export
