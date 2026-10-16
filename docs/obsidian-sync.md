@@ -6,7 +6,7 @@ CouchDB の中のノートは細かく分けて保存され、E2EE で暗号化�
 
 ```
 ノート PC ──(Self-hosted LiveSync)──> private-appserver の CouchDB（/opt/docker/obsidian）
-                                         │ ① 書き出し（準備中）
+                                         │ ① livesync-bridge が暗号を解いて書き出す（CouchDB の変更は数秒で反映）
                                          ▼
                            private-appserver の /opt/docker/obsidian-export/vault（Markdown）
                                          │ ② sync-obsidian.sh（cron で 10 分ごと）
@@ -17,6 +17,8 @@ CouchDB の中のノートは細かく分けて保存され、E2EE で暗号化�
                                          ▼
                            バックエンドが 30 秒ごとに読み、変わったノートだけ埋め込みを作る
 ```
+
+**進み具合（2026-10-16）:** 手順はすべてクラウド環境で動作を確かめた。① の「CouchDB への接続先」だけ、dice さんの `/opt/docker/obsidian/docker-compose.yml` を確認してから書く。
 
 どちらのサーバーも Ubuntu 24.04 で、作業はすべて root で行う。下のコマンドもそのまま root で実行する。
 `portfolio-sync` ユーザーには root の権限を与えない。
@@ -69,13 +71,135 @@ ssh-keygen -t ed25519 -N "" -f /root/.ssh/portfolio_sync -C portfolio-sync
 cat /root/.ssh/portfolio_sync.pub     # これを手順 1 の authorized_keys に貼る
 ```
 
-### ① CouchDB から Markdown に書き出す（準備中）
+### ① CouchDB から Markdown に書き出す
 
-この手順はまだ動作を確かめていないので、書いていない。書き出し先は `/opt/docker/obsidian-export/vault` にする予定。
+Self-hosted LiveSync の作者が出している [livesync-bridge](https://github.com/vrtmrz/livesync-bridge) をコンテナで動かし、CouchDB のノートの暗号を解いて `/opt/docker/obsidian-export/vault` に Markdown として書き出す。
+コンテナは動かしっぱなしにしておき、ノート PC で書いたノートは数秒でこのフォルダに反映される。ノートの削除も反映される。
+
+**書き出し専用にしてある。** livesync-bridge は本来は双方向に同期するツールだが、下の設定の `"ignore": ["**"]` で、書き出したフォルダ側の変更は CouchDB に一切送らない。
+このフォルダの中を書き換えたり消したりしても、Obsidian のノートは変わらない。
+
+2026-10-16 にクラウド環境で次の組み合わせを動かして確かめた（livesync-bridge `fc0e028` / CouchDB 3.5 / Self-hosted LiveSync 1.0.36 の公式 CLI で作った E2EE のデータベース）。
+
+- E2EE・パスの難読化（Obfuscate Properties）・ID キーがすべて有効なノートが、画像も含めて元と同じ中身で書き出される。ID キーの無い古い形式でも書き出される
+- ノートの更新・追加・削除が数秒で反映される
+- 書き出したフォルダでノートを書き換え・削除・追加してコンテナを再起動しても、CouchDB のドキュメント数も更新番号も変わらない
+- 合言葉や ID キーが違うときは、エラーを出して何も書き出さない
+- 書き出したフォルダに ② の `sync-obsidian.sh` をかけると、`obsidianignore` に当たるノートと画像が除かれる
+
+#### 1. Obsidian の設定から値を控える
+
+ノート PC の Obsidian で、Self-hosted LiveSync の設定を開いて次を控える。
+
+| 控えるもの | 場所 |
+|---|---|
+| ユーザー名・パスワード・データベース名 | Remote Configuration の CouchDB の設定 |
+| 合言葉（Passphrase） | End-to-End Encryption の設定 |
+| Obfuscate Properties が有効か | 同じ画面 |
+| ID キー（recovery code） | 同じ画面の **Show current recovery code**。`sls-id-v1:` で始まる文字列。このボタンが無ければ ID キーは使っていない |
+
+#### 2. CouchDB への接続先を確かめる（確認待ち）
+
+> **ここはまだ書けていない。** livesync-bridge のコンテナから `/opt/docker/obsidian` の CouchDB につなぐ方法は、その `docker-compose.yml` の中身で決まる。
+> dice さんから中身（パスワードは消したもの）を聞いてから、下の `docker-compose.yml` の `networks` と、`config.json` の `url` を確定させる。
+
+#### 3. livesync-bridge を置く
+
+livesync-bridge のイメージは配布されていないので、確かめたバージョン（`fc0e028`）のソースを取ってきて手元でビルドする。
+
+```bash
+mkdir -p /opt/docker/obsidian-export/vault
+cd /opt/docker/obsidian-export
+git clone https://github.com/vrtmrz/livesync-bridge.git
+git -C livesync-bridge -c advice.detachedHead=false checkout fc0e028d33b3a12ddee1322951375e05107edc55
+chown 1993:1993 vault        # コンテナの中の deno ユーザー（UID 1993）が書き込めるようにする
+```
+
+#### 4. 設定ファイルを書く
+
+`/opt/docker/obsidian-export/config.json` を作り、1 で控えた値を入れる。
+
+```json
+{
+  "peers": [
+    {
+      "type": "couchdb",
+      "name": "obsidian-couchdb",
+      "url": "（手順 2 で確定させる）",
+      "database": "（データベース名）",
+      "username": "（ユーザー名）",
+      "password": "（パスワード）",
+      "passphrase": "（合言葉）",
+      "obfuscatePassphrase": "（Obfuscate Properties が有効なら合言葉と同じもの。無効なら中身を空にする）",
+      "idDerivationKey": "（sls-id-v1: で始まる ID キー。使っていなければこの行ごと消す）",
+      "baseDir": "",
+      "useRemoteTweaks": true
+    },
+    {
+      "type": "storage",
+      "name": "export",
+      "baseDir": "./data/vault/",
+      "scanOfflineChanges": false,
+      "ignore": ["**"]
+    }
+  ]
+}
+```
+
+`（…）` の部分は、かっこごと実際の値に置き換える。パスワードと合言葉が入るので、root とコンテナ以外は読めないようにする。
+
+```bash
+chown root:1993 /opt/docker/obsidian-export/config.json
+chmod 640 /opt/docker/obsidian-export/config.json
+```
+
+#### 5. 起動する
+
+`/opt/docker/obsidian-export/docker-compose.yml` を作る。
+
+```yaml
+name: obsidian-export
+services:
+  bridge:
+    build: ./livesync-bridge
+    image: localhost/livesync-bridge:fc0e028
+    volumes:
+      - ./config.json:/app/dat/config.json:ro
+      - ./vault:/app/data/vault
+      - bridge_state:/deno-dir/location_data   # どこまで書き出したかの記録
+    # networks: （手順 2 で確定させる）
+    restart: unless-stopped
+volumes:
+  bridge_state:
+```
+
+```bash
+cd /opt/docker/obsidian-export
+docker compose up -d --build
+docker compose logs -f bridge     # 「<-- data/vault/〜 saved」が並べば書き出せている（Ctrl+C で抜ける）
+find vault -type f | head
+```
+
+うまくいかないときのログ:
+
+- `Direct database document IDs do not match the configured ID key.` → ID キーが違う（または要るのに書いていない）
+- `decrypt` を含む長いエラー → 合言葉が違う
+- `CouchDB connect attempt N failed` が続く → `url`・ユーザー名・パスワード・データベース名のどれかが違う
+
+どの場合も、書き出しも CouchDB への書き込みも行われない。`config.json` を直して `docker compose restart` する。
+
+書き出したフォルダを一度空にして最初から書き出し直したいときは、記録ごと消して起動し直す。
+
+```bash
+cd /opt/docker/obsidian-export
+docker compose down -v
+rm -rf /opt/docker/obsidian-export/vault && mkdir /opt/docker/obsidian-export/vault && chown 1993:1993 /opt/docker/obsidian-export/vault
+docker compose up -d
+```
 
 ### ② 送るスクリプトを置く
 
-リポジトリは clone せず、スクリプト 1 本だけを置く（main にスクリプトが入ってから。それまでは URL の `main` を `claude/project-thread-wqqjji` にする）。
+このリポジトリは clone せず、スクリプト 1 本だけを置く。
 
 ```bash
 mkdir -p /opt/docker/obsidian-export
@@ -139,3 +263,31 @@ cron に登録する（`crontab -e`）。
 - public 側: `docker compose logs backend | grep 埋め込み` で「AI 用の埋め込みを N 件作りました」が出る
 - 無料枠を守るため、埋め込みは 30 秒ごとに約 1.2 万文字ずつ作る。ノートが多いと、全部そろうまで時間がかかる（例: 100 万文字なら約 40 分）
 - パネルでノートの内容について質問する。Obsidian のノートは非公開なので、回答の下の参照リンクには出ない
+
+## サーバーに増えるものと消し方
+
+この手順で増えるのは次のものだけ。ほかのファイルや、既存の `/opt/docker/obsidian` の CouchDB には手を入れない（livesync-bridge は CouchDB を読むだけ）。
+
+### public-appserver（10.10.10.52）
+
+| 増えるもの | 消し方 |
+|---|---|
+| `/opt/docker/my_portfolio/.env` の `OBSIDIAN_VAULT_DIR=` の 1 行 | 行を消して `cd /opt/docker/my_portfolio && docker compose up -d` |
+| `portfolio-sync` ユーザーと `/home/portfolio-sync`（`authorized_keys` を含む） | `userdel -r portfolio-sync` |
+| `/srv/portfolio-vault`（送られてきたノート） | `rm -rf /srv/portfolio-vault` |
+| rsync のパッケージ | ほかで使っていなければ `apt remove rsync` |
+
+### private-appserver（10.10.10.51）
+
+| 増えるもの | 消し方 |
+|---|---|
+| cron の 1 行 | `crontab -e` で `sync-obsidian.sh` の行を消す |
+| livesync-bridge のコンテナ・記録用のボリューム・イメージ | `cd /opt/docker/obsidian-export && docker compose down -v --rmi all` |
+| `/opt/docker/obsidian-export`（livesync-bridge のソース、`config.json`、`docker-compose.yml`、書き出した `vault`、`sync-obsidian.sh`） | 上のコンテナを消してから `rm -rf /opt/docker/obsidian-export` |
+| ビルドの土台に使う Docker イメージ `denoland/deno:2.9.7` | ほかで使っていなければ `docker image rm denoland/deno:2.9.7` |
+| 送る用の SSH 鍵 `/root/.ssh/portfolio_sync` と `.pub` | `rm /root/.ssh/portfolio_sync /root/.ssh/portfolio_sync.pub` |
+| ログ `/var/log/sync-obsidian.log` | `rm /var/log/sync-obsidian.log` |
+| 確認用のコピー `/tmp/vault-preview` | `rm -rf /tmp/vault-preview` |
+| rsync のパッケージ | ほかで使っていなければ `apt remove rsync` |
+
+全部消すときは、先に private-appserver の cron の行を消してから、表の上から順に消す。
