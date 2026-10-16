@@ -1,6 +1,7 @@
 # --- General ---
 .DS_Store
 .env*
+!.env.example
 *.log
 __pycache__/
 

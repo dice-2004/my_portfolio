@@ -14,8 +14,9 @@ services:
       - PORT=8080
       - DB_PATH=/app/data/portfolio.db
       - GIN_MODE=release
-      # AI チャット。キーは N100 の .env（git 管理外）に GEMINI_API_KEY=... と書く。無ければチャットは無効
+      # AI チャット。キーはリポジトリ直下の .env（.env.example をコピー、git 管理外）に書く。無ければチャットは無効
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - CHAT_DAILY_LIMIT=${CHAT_DAILY_LIMIT:-400}
       # Obsidian のノートも材料にするとき。Vault を下の volumes でマウントし、そのパスを書く
       # （Vault の assets/obsidianignore か obsidianignore が無いと、安全のため読み込まない）
       - OBSIDIAN_VAULT=${OBSIDIAN_VAULT_IN_CONTAINER:-}
