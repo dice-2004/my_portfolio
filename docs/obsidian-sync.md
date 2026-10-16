@@ -18,7 +18,7 @@ CouchDB の中のノートは細かく分けて保存され、E2EE で暗号化�
                            バックエンドが 30 秒ごとに読み、変わったノートだけ埋め込みを作る
 ```
 
-**進み具合（2026-10-16）:** 手順はすべてクラウド環境で動作を確かめた。① の「CouchDB への接続先」だけ、dice さんの `/opt/docker/obsidian/docker-compose.yml` を確認してから書く。
+**進み具合（2026-10-16）:** 手順はすべてクラウド環境で動作を確かめた。サーバーではまだ何もしていない。
 
 どちらのサーバーも Ubuntu 24.04 で、作業はすべて root で行う。下のコマンドもそのまま root で実行する。
 `portfolio-sync` ユーザーには root の権限を与えない。
@@ -79,13 +79,14 @@ Self-hosted LiveSync の作者が出している [livesync-bridge](https://githu
 **書き出し専用にしてある。** livesync-bridge は本来は双方向に同期するツールだが、下の設定の `"ignore": ["**"]` で、書き出したフォルダ側の変更は CouchDB に一切送らない。
 このフォルダの中を書き換えたり消したりしても、Obsidian のノートは変わらない。
 
-2026-10-16 にクラウド環境で次の組み合わせを動かして確かめた（livesync-bridge `fc0e028` / CouchDB 3.5 / Self-hosted LiveSync 1.0.36 の公式 CLI で作った E2EE のデータベース）。
+2026-10-16 にクラウド環境で次の組み合わせを動かして確かめた（livesync-bridge `fc0e028` / CouchDB 3.3 と 3.5 / Self-hosted LiveSync 1.0.36 の公式 CLI で作った E2EE のデータベース）。
 
 - E2EE・パスの難読化（Obfuscate Properties）・ID キーがすべて有効なノートが、画像も含めて元と同じ中身で書き出される。ID キーの無い古い形式でも書き出される
 - ノートの更新・追加・削除が数秒で反映される
 - 書き出したフォルダでノートを書き換え・削除・追加してコンテナを再起動しても、CouchDB のドキュメント数も更新番号も変わらない
 - 合言葉や ID キーが違うときは、エラーを出して何も書き出さない
 - 書き出したフォルダに ② の `sync-obsidian.sh` をかけると、`obsidianignore` に当たるノートと画像が除かれる
+- dice さんと同じ `/opt/docker/obsidian/docker-compose.yml`（CouchDB 3.3）で、下の手順どおりにつながる。CouchDB 側で `docker compose down` → `up -d` しても、livesync-bridge は自動でつなぎ直す
 
 #### 1. Obsidian の設定から値を控える
 
@@ -98,10 +99,17 @@ Self-hosted LiveSync の作者が出している [livesync-bridge](https://githu
 | Obfuscate Properties が有効か | 同じ画面 |
 | ID キー（recovery code） | 同じ画面の **Show current recovery code**。`sls-id-v1:` で始まる文字列。このボタンが無ければ ID キーは使っていない |
 
-#### 2. CouchDB への接続先を確かめる（確認待ち）
+#### 2. CouchDB への接続先
 
-> **ここはまだ書けていない。** livesync-bridge のコンテナから `/opt/docker/obsidian` の CouchDB につなぐ方法は、その `docker-compose.yml` の中身で決まる。
-> dice さんから中身（パスワードは消したもの）を聞いてから、下の `docker-compose.yml` の `networks` と、`config.json` の `url` を確定させる。
+`/opt/docker/obsidian/docker-compose.yml` では CouchDB のサービス名が `couchdb` で、ネットワークの指定が無い。
+そのため CouchDB は `obsidian_default` という名前のネットワークに入っている。livesync-bridge のコンテナもこのネットワークに入れて、`http://couchdb:5984` でつなぐ。
+CouchDB のポートを外に出したり、`/opt/docker/obsidian` のファイルを書き換えたりする必要はない。
+
+ネットワークの名前は、念のため次のコマンドで確かめる。`obsidian_default` と出ればよい。
+
+```bash
+docker network ls --filter name=obsidian
+```
 
 #### 3. livesync-bridge を置く
 
@@ -125,7 +133,7 @@ chown 1993:1993 vault        # コンテナの中の deno ユーザー（UID 199
     {
       "type": "couchdb",
       "name": "obsidian-couchdb",
-      "url": "（手順 2 で確定させる）",
+      "url": "http://couchdb:5984",
       "database": "（データベース名）",
       "username": "（ユーザー名）",
       "password": "（パスワード）",
@@ -167,10 +175,15 @@ services:
       - ./config.json:/app/dat/config.json:ro
       - ./vault:/app/data/vault
       - bridge_state:/deno-dir/location_data   # どこまで書き出したかの記録
-    # networks: （手順 2 で確定させる）
+    networks:
+      - obsidian
     restart: unless-stopped
 volumes:
   bridge_state:
+networks:
+  obsidian:
+    external: true
+    name: obsidian_default   # /opt/docker/obsidian の CouchDB が入っているネットワーク
 ```
 
 ```bash
@@ -186,7 +199,9 @@ find vault -type f | head
 - `decrypt` を含む長いエラー → 合言葉が違う
 - `CouchDB connect attempt N failed` が続く → `url`・ユーザー名・パスワード・データベース名のどれかが違う
 
-どの場合も、書き出しも CouchDB への書き込みも行われない。`config.json` を直して `docker compose restart` する。
+どの場合も、書き出しも CouchDB への書き込みも行われない。
+
+`/opt/docker/obsidian` で `docker compose down` すると `Network obsidian_default Resource is still in use` と出るが、livesync-bridge が同じネットワークを使っているためで問題ない（CouchDB はちゃんと止まる）。`config.json` を直して `docker compose restart` する。
 
 書き出したフォルダを一度空にして最初から書き出し直したいときは、記録ごと消して起動し直す。
 
