@@ -1,50 +1,53 @@
 # Obsidian のノートを AI チャットに使う
 
-Vault は private-appserver（10.10.10.51）にあり、アプリは public-appserver（10.10.10.52）で動く。
-公開側には `obsidianignore` で除外されていないノートだけを置きたいので、private 側から rsync で送る。
+ノートはノート PC の Obsidian から、Self-hosted LiveSync で private-appserver（10.10.10.51）の CouchDB（`/opt/docker/obsidian`）に同期されている。
+CouchDB の中のノートは細かく分けて保存され、E2EE で暗号化もされているので、そのままでは読めない。
+そこで private-appserver で一度 Markdown のフォルダに書き出し、`obsidianignore` で除外されていないノートだけを public-appserver（10.10.10.52）へ rsync で送る。
 
 ```
-ノート PC ──(Obsidian の同期)──> private-appserver の Vault
-                                     │ scripts/sync-obsidian.sh（cron で 10 分ごと）
-                                     │ ・obsidianignore に当たるパスと .obsidian などは送らない
-                                     ▼
+ノート PC ──(Self-hosted LiveSync)──> private-appserver の CouchDB（/opt/docker/obsidian）
+                                         │ ① 書き出し（準備中）
+                                         ▼
+                           private-appserver の /opt/docker/obsidian-export/vault（Markdown）
+                                         │ ② sync-obsidian.sh（cron で 10 分ごと）
+                                         │   obsidianignore に当たるパスと .obsidian などは送らない
+                                         ▼
                            public-appserver の /srv/portfolio-vault
-                                     │ docker compose で /vault に読み取り専用でマウント
-                                     ▼
+                                         │ docker compose で /vault に読み取り専用でマウント
+                                         ▼
                            バックエンドが 30 秒ごとに読み、変わったノートだけ埋め込みを作る
 ```
+
+どちらのサーバーも Ubuntu 24.04 で、作業はすべて root で行う。下のコマンドもそのまま root で実行する。
+`portfolio-sync` ユーザーには root の権限を与えない。
 
 ## 1. public-appserver（受け取る側）
 
 送られてくるだけの専用ユーザーを作り、そのユーザーは `/srv/portfolio-vault` への rsync しかできないようにする。
 
-ここはどれも管理者の作業なので、root の権限で実行する。ふだんの管理者ユーザーなら下のとおり `sudo` を付け、root で直接ログインしているなら `sudo` を外す（Proxmox の LXC は sudo が入っていないことも多い）。`portfolio-sync` には sudo の権限を与えない。
-
 ```bash
-sudo useradd --system --create-home --shell /bin/sh portfolio-sync
-sudo mkdir -p /srv/portfolio-vault
-sudo chown portfolio-sync: /srv/portfolio-vault
-sudo apt install -y rsync          # rrsync も一緒に入る（Debian 12 / Ubuntu 24.04 以降）
+useradd --system --create-home --shell /bin/sh portfolio-sync
+mkdir -p /srv/portfolio-vault
+chown portfolio-sync: /srv/portfolio-vault
+apt install -y rsync          # rrsync も一緒に入る
 ```
 
-`/home/portfolio-sync/.ssh/authorized_keys` に、手順 2 で作る公開鍵を 1 行で書く。
+手順 2 で作る公開鍵を、`portfolio-sync` の `authorized_keys` に 1 行で書く。
 `command=` と `restrict` で、この鍵ではシェルも転送もできず、決めたフォルダへの rsync だけになる。
 
 ```
-command="rrsync /srv/portfolio-vault",restrict ssh-ed25519 AAAA...（公開鍵） portfolio-sync
+command="rrsync /srv/portfolio-vault",restrict ssh-ed25519 AAAA...（手順 2 で表示される公開鍵） portfolio-sync
 ```
 
 ファイルの持ち主は `portfolio-sync` にして、本人以外が書き換えられないようにする（SSH はそうでないと鍵を使わない）。
 
 ```bash
-sudo -u portfolio-sync mkdir -p -m 700 /home/portfolio-sync/.ssh
-sudo -u portfolio-sync nano /home/portfolio-sync/.ssh/authorized_keys   # 上の 1 行を貼る
-sudo chmod 600 /home/portfolio-sync/.ssh/authorized_keys
+runuser -u portfolio-sync -- mkdir -p -m 700 /home/portfolio-sync/.ssh
+runuser -u portfolio-sync -- nano /home/portfolio-sync/.ssh/authorized_keys   # 上の 1 行を貼る
+chmod 600 /home/portfolio-sync/.ssh/authorized_keys
 ```
 
-sudo が無いときは、`sudo -u portfolio-sync` を `runuser -u portfolio-sync --` に置き換える（例: `runuser -u portfolio-sync -- mkdir -p -m 700 /home/portfolio-sync/.ssh`）。
-
-`docker compose` を動かしているユーザーで、リポジトリ直下の `.env` に追記して、`docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
+`/opt/docker/my_portfolio/.env` に追記して、`/opt/docker/my_portfolio/docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
 
 ```bash
 # .env
@@ -56,32 +59,51 @@ OBSIDIAN_VAULT_IN_CONTAINER=/vault
       - /srv/portfolio-vault:/vault:ro
 ```
 
+`/srv/portfolio-vault` が空のうち（除外リストがまだ届いていないうち）は、バックエンドはノートを読まずに今まで通り動く。
+
 ## 2. private-appserver（送る側）
 
+### 鍵を作る
+
 ```bash
-sudo apt install -y rsync
-ssh-keygen -t ed25519 -N "" -f ~/.ssh/portfolio_sync -C portfolio-sync
-cat ~/.ssh/portfolio_sync.pub     # これを手順 1 の authorized_keys に貼る
+apt install -y rsync
+ssh-keygen -t ed25519 -N "" -f /root/.ssh/portfolio_sync -C portfolio-sync
+cat /root/.ssh/portfolio_sync.pub     # これを手順 1 の authorized_keys に貼る
+```
+
+### ① CouchDB から Markdown に書き出す（準備中）
+
+この手順はまだ動作を確かめていないので、書いていない。書き出し先は `/opt/docker/obsidian-export/vault` にする予定。
+
+### ② 送るスクリプトを置く
+
+リポジトリは clone せず、スクリプト 1 本だけを置く。
+
+```bash
+mkdir -p /opt/docker/obsidian-export
+curl -fsSL -o /opt/docker/obsidian-export/sync-obsidian.sh \
+  https://raw.githubusercontent.com/dice-2004/my_portfolio/main/scripts/sync-obsidian.sh
+chmod +x /opt/docker/obsidian-export/sync-obsidian.sh
 ```
 
 まずは送り先を手元のフォルダにして、何が送られるかを確かめる。
 
 ```bash
-VAULT=/path/to/vault DEST=/tmp/vault-preview ./scripts/sync-obsidian.sh
+VAULT=/opt/docker/obsidian-export/vault DEST=/tmp/vault-preview /opt/docker/obsidian-export/sync-obsidian.sh
 find /tmp/vault-preview -type f | less    # 非公開のノートが入っていないこと
 ```
 
 問題なければ public-appserver へ送る。rrsync を使うので、送り先のパスは `:` だけでよい。
 
 ```bash
-VAULT=/path/to/vault DEST=portfolio-sync@10.10.10.52: \
-RSYNC_SSH="ssh -i $HOME/.ssh/portfolio_sync" ./scripts/sync-obsidian.sh
+VAULT=/opt/docker/obsidian-export/vault DEST=portfolio-sync@10.10.10.52: \
+RSYNC_SSH="ssh -i /root/.ssh/portfolio_sync" /opt/docker/obsidian-export/sync-obsidian.sh
 ```
 
 cron に登録する（`crontab -e`）。
 
 ```
-*/10 * * * * VAULT=/path/to/vault DEST=portfolio-sync@10.10.10.52: RSYNC_SSH="ssh -i $HOME/.ssh/portfolio_sync" /path/to/my_portfolio/scripts/sync-obsidian.sh >>$HOME/sync-obsidian.log 2>&1
+*/10 * * * * VAULT=/opt/docker/obsidian-export/vault DEST=portfolio-sync@10.10.10.52: RSYNC_SSH="ssh -i /root/.ssh/portfolio_sync" /opt/docker/obsidian-export/sync-obsidian.sh >>/var/log/sync-obsidian.log 2>&1
 ```
 
 ## 除外リストの書き方
