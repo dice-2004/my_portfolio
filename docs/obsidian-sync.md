@@ -47,19 +47,17 @@ runuser -u portfolio-sync -- nano /home/portfolio-sync/.ssh/authorized_keys   # 
 chmod 600 /home/portfolio-sync/.ssh/authorized_keys
 ```
 
-`/opt/docker/my_portfolio/.env` に追記して、`/opt/docker/my_portfolio/docker-compose.yml` の backend の volumes にある Vault の行のコメントを外す。
+### アプリの設定（書き出しの準備ができてから）
+
+この設定は、手順 2 で public-appserver にノートが届くようになってから行う。
+`/opt/docker/my_portfolio/.env` に次の 1 行を足し、コンテナを作り直す。`docker-compose.yml` は編集しなくてよい。
 
 ```bash
-# .env
-OBSIDIAN_VAULT_IN_CONTAINER=/vault
+echo 'OBSIDIAN_VAULT_DIR=/srv/portfolio-vault' >> /opt/docker/my_portfolio/.env
+cd /opt/docker/my_portfolio && docker compose up -d
 ```
 
-```yaml
-# docker-compose.yml（backend の volumes）
-      - /srv/portfolio-vault:/vault:ro
-```
-
-`/srv/portfolio-vault` が空のうち（除外リストがまだ届いていないうち）は、バックエンドはノートを読まずに今まで通り動く。
+この 1 行が無いあいだは、バックエンドはノートを読まずに今まで通り動く。やめるときは、この行を消して `docker compose up -d` する。
 
 ## 2. private-appserver（送る側）
 

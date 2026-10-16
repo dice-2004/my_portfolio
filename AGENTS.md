@@ -42,7 +42,7 @@ push 前に上のチェックを通すこと。同じ内容が `.github/workflow
 
 - **管理画面と認証は持たない。** コンテンツはファイルで管理し、Obsidian や git push で更新する。書き込み系の API を追加しないこと。
 - **AI チャット**は Gemini API の無料枠のみを使う（回答: Gemini Flash Lite、埋め込み: Gemini Embedding）。API キーはバックエンドの環境変数だけで持ち、フロントに出さない。
-- Obsidian のノートは、Vault 内の `obsidianignore`（`.md` 付きでも可。.gitignore と同じく置いたフォルダから数える）に書かれたパスを除外して取り込む（`OBSIDIAN_VAULT`）。除外リストが読めないときは Vault を読まない。
+- Obsidian のノートは、Vault 内の `obsidianignore`（`.md` 付きでも可。.gitignore と同じく置いたフォルダから数える）に書かれたパスを除外して取り込む（`.env` の `OBSIDIAN_VAULT_DIR`）。除外リストが読めないときは Vault を読まない。
 - 無料枠を守るため、埋め込みはコンテンツが変わったときだけ少しずつ作る。質問 1 回で使うのは埋め込み 1 回と回答 1 回。回答は 1 日 400 回（`CHAT_DAILY_LIMIT`）、IP ごとに 1 分 5 回・1 日 30 回まで。
 - デザインは「読みやすい作品・経歴ページ + 右からスライドして出る CLI 風チャットパネル」。
 - `main` は常に本番デプロイできる状態を保つ。変更はブランチと PR で行う。
