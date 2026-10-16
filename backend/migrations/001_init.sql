@@ -51,3 +51,13 @@ CREATE TABLE IF NOT EXISTS content_meta (
 -- 管理画面と一緒に廃止したテーブル
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS auth_challenges;
+
+-- AI チャット用。資料のチャンクと Gemini の埋め込み（float32 のリトルエンディアン）
+CREATE TABLE IF NOT EXISTS chunks (
+    hash TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    body TEXT NOT NULL,
+    embedding BLOB NOT NULL
+);

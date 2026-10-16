@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/dice/portfolio/internal/ai"
 	"github.com/dice/portfolio/internal/handler"
 	"github.com/dice/portfolio/internal/repository"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -29,6 +29,14 @@ func main() {
 	}
 	repository.WatchContent(interval)
 
+	gemini := ai.NewGeminiFromEnv()
+	if !gemini.Enabled() {
+		log.Println("GEMINI_API_KEY が無いので、AI チャットは無効です")
+	}
+	index := &ai.Index{DB: repository.DB, Gemini: gemini, Collect: collectChunks}
+	watchIndex(index, interval)
+	chat := &handler.Chat{Gemini: gemini, Index: index, Limit: handler.NewLimiterFromEnv()}
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 
@@ -45,14 +53,8 @@ func main() {
 		)
 	}))
 
-	// CORS（クロスオリジンリソース共有）を許可するミドルウェアを追加
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3001", "http://localhost:3000", "https://portfolio.dice-ke.tech"},
-		AllowMethods:     []string{"GET", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	// CORS ミドルウェアは置かない。ブラウザからの API 呼び出しは Next.js の rewrite で同じオリジンになり、
+	// 別サイトから読ませる必要もない（以前は Origin の合わない POST が 403 になり、AI チャットが動かなかった）
 
 	r.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -66,6 +68,8 @@ func main() {
 	r.GET("/api/skills", handler.GetSkills)
 	r.GET("/api/about", handler.GetAbout)
 	r.GET("/api/timeline", handler.GetAllTimeline)
+	r.GET("/api/chat/status", chat.Status)
+	r.POST("/api/chat", chat.Post)
 
 	// 静的ファイルの配信
 	r.Static("/api/uploads", "./uploads")

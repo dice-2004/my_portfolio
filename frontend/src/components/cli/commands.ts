@@ -2,13 +2,19 @@
 import { profile } from "@/content/profile";
 import { toWorkView, type Portfolio } from "@/lib/portfolio";
 
-export type Line = { kind: "cmd" | "out" | "err"; text: string };
+export type Line = {
+  kind: "cmd" | "out" | "err" | "ai";
+  text: string;
+  sources?: { title: string; url?: string }[];
+};
 
 export interface CommandResult {
   lines: Line[];
   clear?: boolean;
   close?: boolean;
   navigate?: string;
+  /** コマンドではないので AI に質問する */
+  ask?: string;
 }
 
 const out = (text: string): CommandResult => ({ lines: [{ kind: "out", text }] });
@@ -23,7 +29,7 @@ const HELP = [
   "clear          画面を消す",
   "exit           パネルを閉じる",
   "",
-  "それ以外の文章は AI への質問として扱う予定です（準備中）。",
+  "それ以外の文章は AI への質問として扱います（例: どんなチーム開発をしてきた？）。",
 ].join("\n");
 
 function pad(s: string, n: number): string {
@@ -82,8 +88,6 @@ export function runCommand(raw: string, data: Portfolio): CommandResult {
       return { lines: [], close: true };
 
     default:
-      return err(
-        "AI での回答はまだ準備中です。今は help に載っているコマンドが使えます。",
-      );
+      return { lines: [], ask: raw.trim() };
   }
 }
