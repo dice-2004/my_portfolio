@@ -18,12 +18,17 @@ func writeFile(t *testing.T, path, body string) {
 	}
 }
 
-// Obsidian で作った assets/obsidianignore.md を、見出しつきで書いた場合
+// Obsidian で作った assets/obsidianignore.md に、assets から数えたパスを見出しつきで書いた場合
 func TestLoadObsidianIgnoreMarkdownNote(t *testing.T) {
-	t.Setenv("OBSIDIAN_IGNORE_FILE", "")
 	vault := t.TempDir()
 	writeFile(t, filepath.Join(vault, "assets", "obsidianignore.md"),
-		"# obsidianignore\n## This is an ignore file for AI reading agents.\n/assets/音声文字起こし\n/assets/templates\n")
+		"# obsidianignore\n## This is an ignore file for AI reading agents.\n/音声文字起こし\n/templates\n")
+	// Vault 直下にも置ける。名前だけの行はその下のどの階層にも当たる
+	writeFile(t, filepath.Join(vault, "obsidianignore"), "daily_note/\n下書き*\n")
+	writeFile(t, filepath.Join(vault, "daily_note", "2026-10-16.md"), "# 日記\n本文")
+	writeFile(t, filepath.Join(vault, "研究関連ノート", "下書き1.md"), "# 下書き\n本文")
+	// assets の中の除外リストは assets の外には効かない
+	writeFile(t, filepath.Join(vault, "templates", "外.md"), "# 外\n本文")
 	writeFile(t, filepath.Join(vault, "assets", "templates", "日報.md"), "# テンプレ\n本文")
 	writeFile(t, filepath.Join(vault, "assets", "音声文字起こし", "会議.md"), "# 会議\n本文")
 	writeFile(t, filepath.Join(vault, "assets", "AI_anser", "回答.md"), "# 回答\n本文")
@@ -41,7 +46,7 @@ func TestLoadObsidianIgnoreMarkdownNote(t *testing.T) {
 	for _, c := range chunks {
 		got[c.Source] = true
 	}
-	want := []string{"obsidian/assets/AI_anser/回答.md", "obsidian/研究関連ノート/メモ.md"}
+	want := []string{"obsidian/assets/AI_anser/回答.md", "obsidian/研究関連ノート/メモ.md", "obsidian/templates/外.md"}
 	if len(got) != len(want) {
 		t.Fatalf("sources = %v", got)
 	}
@@ -53,7 +58,6 @@ func TestLoadObsidianIgnoreMarkdownNote(t *testing.T) {
 }
 
 func TestLoadObsidianIgnoreMissing(t *testing.T) {
-	t.Setenv("OBSIDIAN_IGNORE_FILE", "")
 	if _, err := loadObsidianIgnore(t.TempDir()); err == nil {
 		t.Fatal("除外リストが無いのに読めてしまった")
 	}

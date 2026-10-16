@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -56,28 +59,48 @@ func collectChunks() ([]ai.Chunk, error) {
 	return chunks, nil
 }
 
-// OBSIDIAN_IGNORE_FILE が無ければ Vault の assets/obsidianignore、次に Vault 直下の obsidianignore を探す。
-// Obsidian でノートとして書けるよう、それぞれ .md 付きでもよい。
-// 除外リストのノート自体は AI の材料にしない。
+// loadObsidianIgnore は Vault 内の obsidianignore（Obsidian で作った obsidianignore.md でもよい）をすべて読む。
+// .gitignore と同じく、どのフォルダに置いてもよく、書いたパスはそのフォルダから数える。
+// 1 つも無ければエラーを返す。除外リストのノート自体は AI の材料にしない。
 func loadObsidianIgnore(vault string) (*ai.Ignore, error) {
-	var paths []string
-	for _, dir := range []string{filepath.Join(vault, "assets"), vault} {
-		paths = append(paths, filepath.Join(dir, "obsidianignore"), filepath.Join(dir, "obsidianignore.md"))
-	}
-	if p := os.Getenv("OBSIDIAN_IGNORE_FILE"); p != "" {
-		paths = []string{p}
-	}
-	var err error
-	for _, p := range paths {
-		var ig *ai.Ignore
-		if ig, err = ai.LoadIgnore(p); err == nil {
-			if rel, relErr := filepath.Rel(vault, p); relErr == nil && !strings.HasPrefix(rel, "..") {
-				ig.Add("/" + filepath.ToSlash(rel))
-			}
-			return ig, nil
+	ig := &ai.Ignore{}
+	found := 0
+	err := filepath.WalkDir(vault, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
+		if p != vault && strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() || (d.Name() != "obsidianignore" && d.Name() != "obsidianignore.md") {
+			return nil
+		}
+		rel, err := filepath.Rel(vault, p)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		base := path.Dir(rel)
+		if base == "." {
+			base = ""
+		}
+		if err := ig.Load(p, base); err != nil {
+			return err
+		}
+		ig.Add("/" + rel)
+		found++
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	if found == 0 {
+		return nil, fmt.Errorf("%s に obsidianignore（または obsidianignore.md）がありません", vault)
+	}
+	return ig, nil
 }
 
 func isDir(p string) bool {

@@ -74,25 +74,29 @@ cron に登録する（`crontab -e`）。
 
 ## 除外リストの書き方
 
-Vault の `assets/obsidianignore`（または Vault 直下の `obsidianignore`）に書く。Obsidian でノートとして作った `obsidianignore.md` でもよい。
+`.gitignore` と同じく、Vault 内のどのフォルダにも `obsidianignore` を置ける。Obsidian でノートとして作った `obsidianignore.md` でもよい。書いたパスは、そのファイルを置いたフォルダから数える。
+
+例: `assets/obsidianignore.md`
 
 ```
 # 説明やメモは # で始める（Obsidian の見出しもそのまま使える）
-/assets/音声文字起こし
-/assets/templates
-daily_note/
+/音声文字起こし
+/templates
 ```
 
-- 先頭の `/` は Vault 直下から。`/templates` は `Vault/templates` だけで、`Vault/assets/templates` には当たらない
-- 先頭に `/` を付けない名前だけの行（`templates/`）は、どの階層にあっても当たる
-- 途中に `/` を含む行（`assets/templates`）は、先頭に `/` があるのと同じ扱い
+これで `assets/音声文字起こし` と `assets/templates` が除外される。`assets` の外（例えば Vault 直下の `daily_note`）を除外したいときは、Vault 直下にも `obsidianignore` を置いてそこに書く。
+
+- 先頭の `/` は、そのファイルを置いたフォルダの直下だけ。`/templates` は `assets/templates` に当たり、`assets/x/templates` には当たらない
+- 先頭に `/` を付けない名前だけの行（`templates/`）は、そのフォルダの中ならどの階層にあっても当たる
+- 途中に `/` を含む行（`a/b`）は、先頭に `/` があるのと同じ扱い
 - 末尾の `/` はあっても無くてもよい。`*` `?` `**` が使える（例: `**/private*`）
-- `#` で始まらない文章の行や、`- /assets/templates` のような箇条書きはパターンとして読まれ、何にも当たらない。パスは 1 行に 1 つそのまま書く
+- `#` で始まらない文章の行や、`- /templates` のような箇条書きはパターンとして読まれ、何にも当たらない。パスは 1 行に 1 つそのまま書く
 - 除外リストのノート自体は AI の材料にしない
+- 除外リストが Vault に 1 つも無いときは、何も送らず、バックエンドも Vault を読まない
 
 ## 送られるもの・送られないもの
 
-- 送る: `.md` ファイルと、除外リスト（`assets/obsidianignore` など）そのもの
+- 送る: `.md` ファイルと、除外リスト（`obsidianignore` / `obsidianignore.md`）そのもの
 - 送らない: `obsidianignore` に当たるパス、`.obsidian` `.trash` などの `.` で始まるもの、画像などの `.md` 以外
 - Vault からノートを消したり、除外リストに足したりすると、次の同期で public 側からも消える（`--delete --delete-excluded`）
 - 除外リストが見つからないときは何も送らない。バックエンドも、除外リストが無い Vault は読まない

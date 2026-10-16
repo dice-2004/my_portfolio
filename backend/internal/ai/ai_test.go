@@ -40,6 +40,30 @@ func TestIgnore(t *testing.T) {
 	}
 }
 
+// assets フォルダに置いた除外リストは、assets から数える
+func TestIgnoreAt(t *testing.T) {
+	ig := &Ignore{}
+	for _, l := range []string{"/templates", "下書き/", "a/b"} {
+		ig.AddAt("assets", l)
+	}
+	cases := map[string]bool{
+		"assets/templates":         true,
+		"assets/templates/日報.md":   true,
+		"templates/日報.md":          false,
+		"assets/x/templates/日報.md": false,
+		"assets/下書き/a.md":          true,
+		"assets/x/下書き/a.md":        true,
+		"下書き/a.md":                 false,
+		"assets/a/b/c.md":          true,
+		"assets/x/a/b/c.md":        false,
+	}
+	for p, want := range cases {
+		if got := ig.Match(p); got != want {
+			t.Errorf("Match(%q) = %v, want %v", p, got, want)
+		}
+	}
+}
+
 func TestFromMarkdownDirSkipsIgnoredAndHidden(t *testing.T) {
 	dir := t.TempDir()
 	write := func(rel, body string) {

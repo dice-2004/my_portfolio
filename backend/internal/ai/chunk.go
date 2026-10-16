@@ -149,26 +149,31 @@ func splitText(source, title, url, text string) []Chunk {
 }
 
 // Ignore は obsidianignore（.gitignore と同じ書き方）の簡易版。
-// 対応: 空行と # のコメント、先頭 / で Vault 直下に固定、末尾 /、* ? **。否定（!）は未対応で無視する。
+// 対応: 空行と # のコメント、先頭 / で除外リストを置いたフォルダ直下に固定、末尾 /、* ? **。否定（!）は未対応で無視する。
+// .gitignore と同じく、パターンは除外リストを置いたフォルダから数える。
 type Ignore struct {
 	res []*regexp.Regexp
 }
 
-func LoadIgnore(path string) (*Ignore, error) {
+// Load は path の除外リストを読み込む。base はそのファイルを置いたフォルダの Vault からの相対パス（直下なら ""）。
+func (ig *Ignore) Load(path, base string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
-	ig := &Ignore{}
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		ig.Add(sc.Text())
+		ig.AddAt(base, sc.Text())
 	}
-	return ig, sc.Err()
+	return sc.Err()
 }
 
-func (ig *Ignore) Add(line string) {
+// Add は Vault 直下に置いた除外リストの 1 行を足す。
+func (ig *Ignore) Add(line string) { ig.AddAt("", line) }
+
+// AddAt は base フォルダに置いた除外リストの 1 行を足す。
+func (ig *Ignore) AddAt(base, line string) {
 	line = strings.TrimSpace(line)
 	if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "!") {
 		return
@@ -194,9 +199,12 @@ func (ig *Ignore) Add(line string) {
 			b.WriteString(regexp.QuoteMeta(line[i : i+1]))
 		}
 	}
-	prefix := "(^|.*/)"
-	if anchored {
-		prefix = "^"
+	prefix := "^"
+	if base = strings.Trim(base, "/"); base != "" {
+		prefix += regexp.QuoteMeta(base) + "/"
+	}
+	if !anchored {
+		prefix += "(.*/)?"
 	}
 	ig.res = append(ig.res, regexp.MustCompile(prefix+b.String()+"(/.*)?$"))
 }
