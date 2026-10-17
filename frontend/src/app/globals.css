@@ -60,6 +60,14 @@ h3 {
   text-wrap: balance;
 }
 
+/* 上のメニューなどページ内リンクで、目的の場所までなめらかにスクロールする。
+ * 動きを減らす設定の人には効かせない。ページ移動時は layout.tsx の data-scroll-behavior で Next.js が一時的に止める。 */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 /* ---- CLI パネルを開いたとき、PC では本文を左に詰めて横並びにする ---- */
 @media (min-width: 1024px) {
   .site-shell {
