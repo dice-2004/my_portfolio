@@ -182,7 +182,7 @@ export default async function Page() {
         <section aria-labelledby="contact">
           <SectionHeading id="contact" title="連絡先" />
           <p className="max-w-[60ch] text-fg">
-            お仕事やインターンのご相談は、X の DM でお気軽にどうぞ。作品のコードは GitHub で公開しています。
+            ご連絡は X の DM でお気軽にどうぞ。作品のコードは GitHub で公開しています。
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a

@@ -16,7 +16,7 @@ import SiteShell from "@/components/SiteShell";
 import { getPortfolio } from "@/lib/portfolio";
 
 const SITE_DESCRIPTION =
-  "大阪工業大学 情報系の学生エンジニア Daisuke（dice）のポートフォリオ。ハッカソンでの受賞作から、C言語の対戦AI、Next.js のWebアプリまで。";
+  "大阪工業大学 情報系の学生エンジニア Daisuke（dice）のポートフォリオ。ハッカソンでの受賞作や制作物、イベント運営や研究の経歴を紹介しています。";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://portfolio.dice-ke.tech"),
