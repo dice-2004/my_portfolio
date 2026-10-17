@@ -94,11 +94,34 @@ function ResizeHandle() {
   );
 }
 
+// ファビコンの写真（緑のバイクと dice）を元にしたドット絵。# が 1 ドット。
+const BIKE = [
+  "......##........",
+  ".....####.......",
+  "......###.......",
+  ".....####....##.",
+  "...########.###.",
+  ".#############..",
+  "..##.......##...",
+  ".####.....####..",
+  "##..##...##..##.",
+  "##..##...##..##.",
+  ".####.....####..",
+];
+
 function DiceMark() {
-  // ファビコン（public/dice.svg）を 32×32 のドット絵にしたもの。2 倍で表示する。
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/dice-pixel.png" alt="" width={64} height={64} className="shrink-0 rounded-[3px] [image-rendering:pixelated]" />
+    <svg
+      aria-hidden
+      viewBox={`0 0 ${BIKE[0].length} ${BIKE.length}`}
+      width={BIKE[0].length * 4}
+      height={BIKE.length * 4}
+      shapeRendering="crispEdges"
+      fill="var(--bike)"
+      className="mt-1 shrink-0"
+    >
+      {BIKE.flatMap((row, y) => [...row].map((c, x) => (c === "#" ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} /> : null)))}
+    </svg>
   );
 }
 
