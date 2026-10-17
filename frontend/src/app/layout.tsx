@@ -54,7 +54,7 @@ export default async function RootLayout({
   const portfolio = await getPortfolio();
 
   return (
-    <html lang="ja" className="antialiased">
+    <html lang="ja" className="antialiased" data-scroll-behavior="smooth">
       <body className="min-h-dvh">
         <CliProvider>
           <SiteShell>
