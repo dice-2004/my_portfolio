@@ -247,13 +247,45 @@ find /tmp/vault-preview -type f | less    # 非公開のノートが入ってい
 ```bash
 VAULT=/opt/docker/obsidian-export/vault DEST=portfolio-sync@10.10.10.52: \
 RSYNC_SSH="ssh -i /root/.ssh/portfolio_sync" /opt/docker/obsidian-export/sync-obsidian.sh
+echo "終了コード: $?"
 ```
 
-cron に登録する（`crontab -e`）。
+- 初めて送るときだけ `Are you sure you want to continue connecting (yes/no/[fingerprint])?` と聞かれるので `yes` と打つ。これを一度済ませておかないと、cron からの送信が止まる
+- うまくいくと何も表示されず、`終了コード: 0` と出る。0 以外のときは、その上に出たエラーを見る（`Permission denied (publickey)` なら手順 1 の `authorized_keys` を見直す）
+
+#### 届いたかを確かめる
+
+private-appserver で、送ったはずのファイルの数を数える（上で作った確認用のコピーを使う）。
+
+```bash
+find /tmp/vault-preview -type f | wc -l
+```
+
+public-appserver で、届いたファイルの数と中身を見る。数が private 側と同じなら、全部届いている。
+
+```bash
+find /srv/portfolio-vault -type f | wc -l
+find /srv/portfolio-vault -type f | head -20      # 非公開のノートが入っていないこと
+```
+
+確かめ終わったら、private-appserver の確認用のコピーは消してよい（`rm -rf /tmp/vault-preview`）。
+
+#### cron に登録する
+
+`crontab -e` で次の 1 行を足す。
 
 ```
 */10 * * * * VAULT=/opt/docker/obsidian-export/vault DEST=portfolio-sync@10.10.10.52: RSYNC_SSH="ssh -i /root/.ssh/portfolio_sync" /opt/docker/obsidian-export/sync-obsidian.sh >>/var/log/sync-obsidian.log 2>&1
 ```
+
+cron で送れているかは、ノート PC の Obsidian でどれかのノートを書き換え、10 分ほど待ってから public-appserver で確かめる。
+書き換えたノートが出てくれば、書き出し（①）と送信（②）の両方が動いている。
+
+```bash
+find /srv/portfolio-vault -type f -mmin -15       # 15 分以内に変わったファイル
+```
+
+出てこないときは、private-appserver で `cat /var/log/sync-obsidian.log` を見る。送信がうまくいっているあいだは、このログには何も書かれない。
 
 ## 除外リストの書き方
 
