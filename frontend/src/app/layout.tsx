@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_JP, JetBrains_Mono } from "next/font/google";
+// フォントは npm パッケージから読み、サイト自身から配る。ビルド時に Google Fonts へ取りに行かないので、
+// ネットワークが不安定なサーバーでもビルドが失敗しない。
+import "@fontsource/ibm-plex-sans-jp/400.css";
+import "@fontsource/ibm-plex-sans-jp/500.css";
+import "@fontsource/ibm-plex-sans-jp/700.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
+import "@fontsource/jetbrains-mono/latin-700.css";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -7,20 +14,6 @@ import { CliProvider } from "@/components/cli/CliContext";
 import CliPanel from "@/components/cli/CliPanel";
 import SiteShell from "@/components/SiteShell";
 import { getPortfolio } from "@/lib/portfolio";
-
-const plexJp = IBM_Plex_Sans_JP({
-  variable: "--font-plex-jp",
-  weight: ["400", "500", "700"],
-  subsets: ["latin"],
-  display: "swap",
-  preload: false,
-});
-
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const SITE_DESCRIPTION =
   "大阪工業大学 情報系の学生エンジニア Daisuke（dice）のポートフォリオ。ハッカソンでの受賞作から、C言語の対戦AI、Next.js のWebアプリまで。";
@@ -61,7 +54,7 @@ export default async function RootLayout({
   const portfolio = await getPortfolio();
 
   return (
-    <html lang="ja" className={`${plexJp.variable} ${jetbrains.variable} antialiased`}>
+    <html lang="ja" className="antialiased">
       <body className="min-h-dvh">
         <CliProvider>
           <SiteShell>
