@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,17 +49,85 @@ func RunMigrations() {
 	if _, err := DB.Exec(query); err != nil {
 		log.Fatalf("マイグレーションの実行エラー: %v", err)
 	}
+	if err := addWorkColumns(); err != nil {
+		log.Fatalf("works テーブルの列の追加に失敗しました: %v", err)
+	}
 	log.Println("マイグレーションの実行に成功しました！")
+}
+
+// 001_init.sql の CREATE TABLE IF NOT EXISTS は既存の DB に列を足さないので、後から増えた列はここで足す。
+// 足したときは作品ファイルを読み直させる（中身が同じでも新しい列を埋めるため）。
+func addWorkColumns() error {
+	have := map[string]bool{}
+	rows, err := DB.Query("SELECT name FROM pragma_table_info('works')")
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			rows.Close()
+			return err
+		}
+		have[name] = true
+	}
+	rows.Close()
+
+	added := false
+	for _, c := range []struct{ name, def string }{
+		{"images", "TEXT"},
+		{"video_url", "TEXT"},
+		{"featured", "INTEGER DEFAULT 0"},
+	} {
+		if have[c.name] {
+			continue
+		}
+		if _, err := DB.Exec("ALTER TABLE works ADD COLUMN " + c.name + " " + c.def); err != nil {
+			return err
+		}
+		added = true
+	}
+	if added {
+		_, err = DB.Exec("DELETE FROM content_meta WHERE file = 'works_unified.md'")
+	}
+	return err
 }
 
 type project struct {
 	title       string
 	description string
 	githubURL   string
-	imageURL    string
+	images      []string
+	videoURL    string
+	featured    bool
 	period      string
 	team        string
 	tech        string
+}
+
+// 画像を置くフォルダ（seeds/media/）の公開 URL。/api は Next.js の rewrite でバックエンドに届く。
+const mediaURLPrefix = "/api/media/"
+
+// 「oton-zzz/1.png」のようなファイル名を /api/media/oton-zzz/1.png にする。http(s):// で始まるものはそのまま。
+func mediaURL(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" || strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") {
+		return v
+	}
+	parts := strings.Split(strings.TrimPrefix(v, "/"), "/")
+	for i, p := range parts {
+		parts[i] = url.PathEscape(p)
+	}
+	return mediaURLPrefix + strings.Join(parts, "/")
+}
+
+// 「はい」「yes」「true」「○」などを代表作の印として扱う。
+func isYes(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "はい", "yes", "true", "○", "◯", "1":
+		return true
+	}
+	return false
 }
 
 func parseUnifiedMD(content string) []project {
@@ -79,6 +148,9 @@ func parseUnifiedMD(content string) []project {
 	reSolution := regexp.MustCompile(`- \*\*解決策\*\*: (.*)`)
 	reRole := regexp.MustCompile(`- \*\*担当・工夫した点\*\*: (.*)`)
 	reNotes := regexp.MustCompile(`- \*\*備考\*\*: (.*)`)
+	reImages := regexp.MustCompile(`- \*\*画像\*\*: (.*)`)
+	reVideo := regexp.MustCompile(`- \*\*動画\*\*: (.*)`)
+	reFeatured := regexp.MustCompile(`- \*\*代表作\*\*: (.*)`)
 
 	matchVal := func(re *regexp.Regexp, text string) string {
 		m := re.FindStringSubmatch(text)
@@ -104,7 +176,17 @@ func parseUnifiedMD(content string) []project {
 		titleLine := cleanLines[0]
 		title := strings.TrimSpace(strings.Split(titleLine, " (")[0])
 
+		// 「(未記載・個人演習)」のような URL でない値はリンクにしない
 		github := matchVal(reGitHub, item)
+		if !strings.HasPrefix(github, "http://") && !strings.HasPrefix(github, "https://") {
+			github = ""
+		}
+		var images []string
+		for _, v := range strings.Split(matchVal(reImages, item), ",") {
+			if u := mediaURL(v); u != "" {
+				images = append(images, u)
+			}
+		}
 		tech := matchVal(reTech, item)
 		period := matchVal(rePeriod, item)
 		team := matchVal(reTeam, item)
@@ -151,7 +233,9 @@ func parseUnifiedMD(content string) []project {
 			title:       title,
 			description: strings.TrimSpace(descBuilder.String()),
 			githubURL:   github,
-			imageURL:    "/no-image.png",
+			images:      images,
+			videoURL:    mediaURL(matchVal(reVideo, item)),
+			featured:    isYes(matchVal(reFeatured, item)),
 			period:      period,
 			team:        team,
 			tech:        tech,

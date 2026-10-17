@@ -2,7 +2,8 @@ import Link from "next/link";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import AskButton from "@/components/cli/AskButton";
 import { profile } from "@/content/profile";
-import { getPortfolio, toWorkView, type Skill, type Timeline, type WorkView } from "@/lib/portfolio";
+import WorksExplorer from "@/components/works/WorksExplorer";
+import { filterTags, getPortfolio, toWorkView, type Skill, type Timeline, type WorkView } from "@/lib/portfolio";
 
 function sortTimeline(items: Timeline[]): Timeline[] {
   // event_date は "2025.05.17" や "2023.04 - 2027.03" の形。先頭の日付で新しい順に並べる。
@@ -36,12 +37,17 @@ function Meta({ work }: { work: WorkView }) {
 }
 
 function FeaturedWork({ work }: { work: WorkView }) {
+  const cover = work.images[0];
   return (
     <Link
       href={`/works/${work.id}`}
       className="group flex flex-col gap-3 border-l-2 border-accent bg-surface p-5 transition-colors hover:bg-line/40"
     >
-      <p className="text-sm font-medium text-accent">{work.award}</p>
+      {cover && (
+        // eslint-disable-next-line @next/next/no-img-element -- 画像はバックエンドが配信するので next/image の最適化を通さない
+        <img src={cover} alt="" className="-mx-5 -mt-5 mb-1 aspect-video w-[calc(100%+2.5rem)] max-w-none object-cover" />
+      )}
+      {work.award && <p className="text-sm font-medium text-accent">{work.award}</p>}
       <h3 className="text-xl font-bold text-fg group-hover:underline group-hover:underline-offset-4">{work.title}</h3>
       {work.summary && <p className="text-[15px] leading-relaxed text-fg">{work.summary}</p>}
       <div className="mt-auto flex flex-col gap-2 pt-2">
@@ -60,31 +66,14 @@ function FeaturedWork({ work }: { work: WorkView }) {
   );
 }
 
-function WorkRow({ work }: { work: WorkView }) {
-  return (
-    <li>
-      <Link
-        href={`/works/${work.id}`}
-        className="group grid gap-1 border-b border-line py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6"
-      >
-        <div className="min-w-0">
-          <h3 className="font-bold text-fg group-hover:text-accent">{work.title}</h3>
-          {work.summary && <p className="mt-1 line-clamp-2 text-sm text-dim">{work.summary}</p>}
-        </div>
-        <div className="text-sm text-dim sm:text-right">
-          <p>{work.period}</p>
-          <p>{work.team}</p>
-        </div>
-      </Link>
-    </li>
-  );
-}
-
 export default async function Page() {
   const { works, skills, about, timelines } = await getPortfolio();
   const views = works.map(toWorkView);
-  const featured = views.filter((w) => w.award);
-  const others = views.filter((w) => !w.award);
+  // works_unified.md で「代表作: はい」の作品。1 件も無ければ受賞作を代わりに出す
+  const flagged = views.filter((w) => w.featured);
+  const featured = flagged.length > 0 ? flagged : views.filter((w) => w.award);
+  // 一覧は本文を使わないので、クライアントに送る量を減らす
+  const listed = views.map((w) => ({ ...w, description: "", body: "" }));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -124,20 +113,22 @@ export default async function Page() {
 
         {/* 作品 */}
         <section aria-labelledby="works">
-          <SectionHeading id="works" title="作品" note={`${works.length}件。受賞作を先に載せています。`} />
+          <SectionHeading id="works" title="作品" note="代表作と、これまでに作ったものすべてを載せています。" />
           {featured.length > 0 && (
-            <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {featured.map((w) => (
-                <FeaturedWork key={w.id} work={w} />
-              ))}
+            <div className="mb-14">
+              <h3 className="mb-4 font-mono text-lg font-bold text-fg">代表作</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {featured.map((w) => (
+                  <FeaturedWork key={w.id} work={w} />
+                ))}
+              </div>
             </div>
           )}
-          {others.length > 0 && (
-            <ul className="border-t border-line">
-              {others.map((w) => (
-                <WorkRow key={w.id} work={w} />
-              ))}
-            </ul>
+          {works.length > 0 && (
+            <>
+              <h3 className="mb-4 font-mono text-lg font-bold text-fg">すべての作品</h3>
+              <WorksExplorer works={listed} tags={filterTags(views)} />
+            </>
           )}
           {works.length === 0 && <p className="text-dim">作品データを読み込めませんでした。</p>}
         </section>

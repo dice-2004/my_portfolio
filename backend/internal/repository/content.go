@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -112,10 +113,15 @@ func syncFile(f contentFile) (hash string, err error) {
 func loadWorks(tx *sql.Tx, data []byte) (int, error) {
 	projects := parseUnifiedMD(string(data))
 	for i, p := range projects {
+		cover := ""
+		if len(p.images) > 0 {
+			cover = p.images[0]
+		}
 		if _, err := tx.Exec(`
-			INSERT INTO works (id, title, description, image_url, github_url, period, team, tech, display_order)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, i+1, p.title, p.description, p.imageURL, p.githubURL, p.period, p.team, p.tech, i+1); err != nil {
+			INSERT INTO works (id, title, description, image_url, github_url, period, team, tech, display_order, images, video_url, featured)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, i+1, p.title, p.description, cover, p.githubURL, p.period, p.team, p.tech, i+1,
+			strings.Join(p.images, "\n"), p.videoURL, p.featured); err != nil {
 			return 0, fmt.Errorf("%s: %w", p.title, err)
 		}
 	}

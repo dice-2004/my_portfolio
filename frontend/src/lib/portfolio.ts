@@ -12,6 +12,10 @@ export interface Work {
   tech: string;
   display_order: number;
   created_at: string;
+  // 古いバックエンドからは来ないので省略可にしておく
+  images?: string[];
+  video_url?: string;
+  featured?: boolean;
 }
 
 export interface Skill {
@@ -85,6 +89,9 @@ export interface WorkView extends Work {
   summary: string;
   body: string;
   techList: string[];
+  // 絞り込み用の技術名（"Python (OpenCV, MediaPipe)" → Python, OpenCV, MediaPipe）
+  techTags: string[];
+  images: string[];
 }
 
 const AWARD_RE = /🏆 \*\*AWARD:\*\*\s*(.+)/;
@@ -122,7 +129,67 @@ export function toWorkView(work: Work): WorkView {
   // 見出しの無い自由記述（管理画面で手書きされたもの等）はそのまま本文にする。
   const body = Object.keys(sec).length > 0 ? bodyParts.join("\n\n") : desc.replace(AWARD_RE, "").trim();
 
-  return { ...work, award, summary, body, techList: splitTech(work.tech || "") };
+  const techList = splitTech(work.tech || "");
+  return {
+    ...work,
+    award,
+    summary,
+    body,
+    techList,
+    techTags: techTags(techList),
+    images: work.images ?? [],
+  };
+}
+
+// 表記ゆれをまとめる（小文字で引く）
+const TAG_ALIAS: Record<string, string> = {
+  js: "JavaScript",
+  "youtube api": "YouTube API",
+  "discord.py": "Discord",
+  discordgo: "Discord",
+};
+
+// splitTech の結果を技術名に分ける。括弧の中の割合（93.1%）や版（1.21+）、末尾の版番号（Next.js 16）は捨てる。
+export function techTags(techList: string[]): string[] {
+  const out = new Set<string>();
+  for (const item of techList) {
+    const inner = [...item.matchAll(/[(（]([^)）]*)[)）]/g)].flatMap((m) => m[1].split(/[,、]/));
+    const base = item.replace(/[(（][^)）]*[)）]/g, "");
+    for (const raw of [...base.split("/"), ...inner]) {
+      const name = raw.trim().replace(/\s+v?\d+(\.\d+)*\+?$/, "");
+      if (!name || /^[\d.]+\s*%?\+?$/.test(name)) continue;
+      out.add(TAG_ALIAS[name.toLowerCase()] ?? name);
+    }
+  }
+  return [...out];
+}
+
+// 絞り込みのボタンに出す技術。2 件以上の作品で使っているものを多い順に。HTML・CSS・Makefile は数が多いだけなので出さない。
+const TAG_HIDDEN = new Set(["HTML", "CSS", "Makefile"]);
+
+export function filterTags(works: WorkView[]): string[] {
+  const count = new Map<string, number>();
+  for (const w of works) for (const t of w.techTags) count.set(t, (count.get(t) ?? 0) + 1);
+  return [...count.entries()]
+    .filter(([t, n]) => n >= 2 && !TAG_HIDDEN.has(t))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([t]) => t);
+}
+
+// YouTube の URL なら埋め込み用の URL を返す。それ以外は null。
+export function youtubeEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\.|^m\./, "");
+    let id: string | null = null;
+    if (host === "youtu.be") id = u.pathname.slice(1);
+    else if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      id = u.searchParams.get("v") ?? u.pathname.match(/^\/(?:shorts|embed|live)\/([^/]+)/)?.[1] ?? null;
+    }
+    return id && /^[\w-]{6,}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+  } catch {
+    return null;
+  }
 }
 
 // "Python (OpenCV, MediaPipe), C++/Arduino" → ["Python (OpenCV, MediaPipe)", "C++/Arduino"]

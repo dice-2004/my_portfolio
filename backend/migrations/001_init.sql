@@ -9,7 +9,11 @@ CREATE TABLE IF NOT EXISTS works (
     tech TEXT,
     display_order INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- 画像の URL を改行区切りで。image_url はその先頭（一覧のサムネイル）
+    images TEXT,
+    video_url TEXT,
+    featured INTEGER DEFAULT 0
 );
 
 
