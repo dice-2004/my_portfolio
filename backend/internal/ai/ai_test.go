@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -140,6 +141,16 @@ func fakeGemini(t *testing.T, embedCalls *int32) *Gemini {
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{map[string]any{"text": " dice は Go を使います。\n参照: 1 "}}}}}})
+		case strings.HasSuffix(r.URL.Path, ":streamGenerateContent"):
+			if r.URL.Query().Get("alt") != "sse" || !strings.Contains(string(b), "Go の API サーバー") {
+				http.Error(w, "資料が渡っていない", http.StatusBadRequest)
+				return
+			}
+			w.Header().Set("Content-Type", "text/event-stream")
+			for _, part := range []string{" dice は", " Go を使います。\n", "参", "照: 1 "} {
+				b, _ := json.Marshal(map[string]any{"candidates": []any{map[string]any{"content": map[string]any{"parts": []any{map[string]any{"text": part}}}}}})
+				fmt.Fprintf(w, "data: %s\r\n\r\n", b)
+			}
 		default:
 			http.NotFound(w, r)
 		}
@@ -193,6 +204,15 @@ func TestIndexRefreshSearchAnswer(t *testing.T) {
 		t.Fatalf("answer=%q sources=%+v err=%v", answer, sources, err)
 	}
 
+	var streamed strings.Builder
+	answer, sources, err = AnswerStream(ctx, g, ix, "Go は使えますか", nil, func(t string) { streamed.WriteString(t) })
+	if err != nil || answer != "dice は Go を使います。" || len(sources) == 0 || sources[0].URL != "/works/1" {
+		t.Fatalf("stream answer=%q sources=%+v err=%v", answer, sources, err)
+	}
+	if got := streamed.String(); got != " dice は Go を使います。\n" {
+		t.Fatalf("streamed = %q", got)
+	}
+
 	// 材料から消えたチャンクは削除される
 	docs = docs[:1]
 	ix.Refresh(ctx)
@@ -228,5 +248,22 @@ func TestSplitRefs(t *testing.T) {
 	}
 	if _, s := splitRefs("資料には載っていません。\n参照: なし", docs); len(s) != 0 {
 		t.Fatalf("sources for なし = %+v", s)
+	}
+}
+
+func TestRefFilter(t *testing.T) {
+	var f refFilter
+	var got []string
+	for _, p := range []string{"一行目\n二", "行目", "\n", " 参", "照：", "2\n"} {
+		got = append(got, f.Write(p))
+	}
+	want := []string{"一行目\n二", "行目", "\n", "", "", ""}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	// 「参」で始まっても参照行でなければ、続きが来た時点で出す
+	f = refFilter{}
+	if a, b := f.Write("参"), f.Write("加しました。"); a != "" || b != "参加しました。" {
+		t.Fatalf("got %q %q", a, b)
 	}
 }

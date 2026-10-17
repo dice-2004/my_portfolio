@@ -70,6 +70,7 @@ func main() {
 	r.GET("/api/timeline", handler.GetAllTimeline)
 	r.GET("/api/chat/status", chat.Status)
 	r.POST("/api/chat", chat.Post)
+	r.POST("/api/chat/stream", chat.Stream)
 
 	// 静的ファイルの配信
 	r.Static("/api/uploads", "./uploads")

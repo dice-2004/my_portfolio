@@ -6,6 +6,8 @@ export type Line = {
   kind: "cmd" | "out" | "err" | "ai";
   text: string;
   sources?: { title: string; url?: string }[];
+  /** Ctrl+C で途中で止めた回答 */
+  stopped?: boolean;
 };
 
 export interface CommandResult {
@@ -37,17 +39,75 @@ export const COMMANDS: { name: string; usage?: string; desc: string }[] = [
   { name: "/exit", desc: "パネルを閉じる" },
 ];
 
-/** 入力中の文字列に合うコマンド。"/" で始まり、まだ引数を打っていないときだけ出す。 */
-export function suggest(input: string): typeof COMMANDS {
-  if (!input.startsWith("/") || /\s/.test(input)) return [];
-  const q = input.toLowerCase();
-  return COMMANDS.filter((c) => c.name.startsWith(q));
+/** 入力欄の上に出す候補。選ぶと入力欄が insert になり、run なら続けて実行する。 */
+export interface Suggestion {
+  label: string;
+  desc: string;
+  insert: string;
+  run?: boolean;
+}
+
+const MAX_SUGGEST = 8;
+
+/**
+ * 入力中の文字列に合う候補。
+ * - "/" で始まり引数をまだ打っていない → コマンド
+ * - "/open " のあと → 作品（番号かタイトルの一部で絞る）
+ * - 末尾の語が "@" で始まる → 作品の名前（質問の中で作品を指すため）
+ */
+export function suggest(input: string, data: Portfolio): Suggestion[] {
+  if (input.startsWith("/") && !/\s/.test(input)) {
+    const q = input.toLowerCase();
+    return COMMANDS.filter((c) => c.name.startsWith(q)).map((c) => ({
+      label: c.usage ?? c.name,
+      desc: c.desc,
+      insert: c.name + (c.usage ? " " : ""),
+      run: !c.usage,
+    }));
+  }
+
+  const open = input.match(/^\/open\s+(\S*)$/i);
+  if (open) {
+    const q = open[1].toLowerCase();
+    return data.works
+      .map((w, i) => ({ n: String(i + 1), title: w.title }))
+      .filter((w) => !q || w.n.startsWith(q) || w.title.toLowerCase().includes(q))
+      .slice(0, MAX_SUGGEST)
+      .map((w) => ({ label: `/open ${w.n}`, desc: w.title, insert: `/open ${w.n}`, run: true }));
+  }
+
+  const at = input.match(/(^|\s)@([^\s@]*)$/);
+  if (at) {
+    const q = at[2].toLowerCase();
+    const head = input.slice(0, input.length - at[2].length - 1);
+    return data.works
+      .filter((w) => w.title.toLowerCase().includes(q))
+      .slice(0, MAX_SUGGEST)
+      .map((w) => ({ label: `@${w.title}`, desc: w.period || "作品", insert: `${head}@${w.title} ` }));
+  }
+  return [];
+}
+
+/** 文中の「@作品名」を探すための正規表現。長い名前から順に当てる。 */
+export function mentionPattern(data: Portfolio): RegExp | null {
+  const titles = data.works.map((w) => w.title).filter(Boolean);
+  if (titles.length === 0) return null;
+  const esc = titles.sort((a, b) => b.length - a.length).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`(@(?:${esc.join("|")}))`, "g");
 }
 
 const HELP = [
   ...COMMANDS.map((c) => `${pad(c.usage ?? c.name, 15)}${c.desc}`),
   "",
   "/ で始まらない文章は AI への質問として扱います（例: どんなチーム開発をしてきた？）。",
+  "@ を打つと作品の名前を選んで質問に入れられます（例: @作品名 の工夫は？）。",
+  "",
+  `${pad("Tab", 15)}候補を補完する（/open のあとなら作品の番号）`,
+  `${pad("Shift+Enter", 15)}改行する`,
+  `${pad("Up / Down", 15)}前に入力した文を呼び出す`,
+  `${pad("Ctrl+C", 15)}回答を止める / 入力を消す`,
+  `${pad("Ctrl+L", 15)}画面を消す（会話は続く）`,
+  `${pad("Esc", 15)}パネルを閉じる`,
 ].join("\n");
 
 export function runCommand(raw: string, data: Portfolio): CommandResult {

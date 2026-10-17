@@ -46,6 +46,64 @@ func isNote(c Chunk) bool { return strings.HasPrefix(c.Source, "obsidian/") }
 
 // Answer は資料を選び、Gemini に回答を作らせる。
 func Answer(ctx context.Context, g *Gemini, ix *Index, question string, history []Turn) (string, []Source, error) {
+	docs, system, turns, err := prepare(ctx, g, ix, question, history)
+	if err != nil {
+		return "", nil, err
+	}
+	answer, err := g.Generate(ctx, system, turns)
+	if err != nil {
+		return "", nil, err
+	}
+	answer, sources := splitRefs(answer, docs)
+	return answer, sources, nil
+}
+
+// AnswerStream は Answer と同じ回答を、届いた分から onText に渡しながら作る。
+// 最後の「参照: 1, 3」行は onText に渡さない。返す answer は Answer と同じく整えたもの。
+func AnswerStream(ctx context.Context, g *Gemini, ix *Index, question string, history []Turn, onText func(string)) (string, []Source, error) {
+	docs, system, turns, err := prepare(ctx, g, ix, question, history)
+	if err != nil {
+		return "", nil, err
+	}
+	var f refFilter
+	answer, err := g.GenerateStream(ctx, system, turns, func(t string) {
+		if out := f.Write(t); out != "" {
+			onText(out)
+		}
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	answer, sources := splitRefs(answer, docs)
+	return answer, sources, nil
+}
+
+// refFilter は、最後の行が「参照:」行（かその書きかけ）の間はその行を出さずに待つ。
+type refFilter struct {
+	buf     strings.Builder
+	emitted int
+}
+
+func (f *refFilter) Write(t string) string {
+	f.buf.WriteString(t)
+	all := f.buf.String()
+	safe := len(all)
+	// 末尾の改行は見ずに、中身のある最後の行を調べる
+	trimmed := strings.TrimRight(all, " \t\r\n")
+	start := strings.LastIndexByte(trimmed, '\n') + 1
+	tail := strings.TrimSpace(trimmed[start:])
+	if strings.HasPrefix("参照", tail) || strings.HasPrefix(tail, "参照") {
+		safe = start
+	}
+	if safe <= f.emitted {
+		return ""
+	}
+	out := all[f.emitted:safe]
+	f.emitted = safe
+	return out
+}
+
+func prepare(ctx context.Context, g *Gemini, ix *Index, question string, history []Turn) ([]Chunk, string, []Turn, error) {
 	all := ix.All()
 	var site []Chunk
 	hasNotes := false
@@ -64,7 +122,7 @@ func Answer(ctx context.Context, g *Gemini, ix *Index, question string, history 
 	if size > maxFullContextChars || hasNotes {
 		qv, err := g.EmbedQuery(ctx, question)
 		if err != nil {
-			return "", nil, err
+			return nil, "", nil, err
 		}
 		hits = ix.Search(qv, len(all))
 	}
@@ -93,12 +151,7 @@ func Answer(ctx context.Context, g *Gemini, ix *Index, question string, history 
 
 	system := systemPrompt + "\n\n資料:\n" + b.String()
 	turns := append(append([]Turn{}, history...), Turn{Role: "user", Text: question})
-	answer, err := g.Generate(ctx, system, turns)
-	if err != nil {
-		return "", nil, err
-	}
-	answer, sources := splitRefs(answer, docs)
-	return answer, sources, nil
+	return docs, system, turns, nil
 }
 
 // splitRefs は回答の最後の「参照: 1, 3」行を取り除き、サイト内にページがある資料だけを出典として返す。

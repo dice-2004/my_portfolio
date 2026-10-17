@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCli } from "./CliContext";
 import { profile } from "@/content/profile";
 import type { Portfolio } from "@/lib/portfolio";
-import { runCommand, suggest, type Line } from "./commands";
+import { mentionPattern, runCommand, suggest, type Line } from "./commands";
+import { updateSession, useSession } from "./session";
 import { SPRITES } from "./sprites";
 
-const VERSION = "v0.2.0";
+const VERSION = "v0.3.0";
 
 type AiStatus = { enabled: boolean; ready: boolean; model: string; remaining: number; problem?: string };
-type Turn = { role: "user" | "assistant"; text: string };
 
 // パネル幅（PC のみ）。ドラッグで変えた幅はこのブラウザに覚えておく。
 const WIDTH_KEY = "cli-panel-width";
@@ -133,20 +133,91 @@ function PixelMark({ animate }: { animate: boolean }) {
   );
 }
 
+// Claude Code の「✻ 考え中…」に似せた表示。記号を回し、経過秒数を出す。
+const SPINNER = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+
+function Thinking({ since, writing }: { since: number; writing: boolean }) {
+  const [now, setNow] = useState(since);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 120);
+    return () => clearInterval(t);
+  }, []);
+  const elapsed = Math.max(0, now - since);
+  // 動きを減らす設定のときは記号を回さない
+  const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return (
+    <p className="text-dim" role="status">
+      <span className="mr-1.5 inline-block w-3 text-accent" aria-hidden>
+        {still ? "✻" : SPINNER[Math.floor(elapsed / 120) % SPINNER.length]}
+      </span>
+      {writing ? "書いています…" : "考え中…"}
+      <span className="ml-2">
+        （{Math.floor(elapsed / 1000)} 秒 · <span className="text-fg">Ctrl+C</span> で止める）
+      </span>
+    </p>
+  );
+}
+
+/** 入力した文の中の「@作品名」を色付きで出す。 */
+function WithMentions({ text, pattern }: { text: string; pattern: RegExp | null }) {
+  if (!pattern) return <>{text}</>;
+  return (
+    <>
+      {text.split(pattern).map((part, i) =>
+        i % 2 === 1 ? (
+          <span key={i} className="text-accent">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+/** Server-Sent Events を 1 件ずつ取り出す。 */
+async function* readEvents(res: Response): AsyncGenerator<{ event: string; data: string }> {
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += value.replace(/\r\n/g, "\n");
+    let end;
+    while ((end = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, end);
+      buf = buf.slice(end + 2);
+      let event = "message";
+      const data: string[] = [];
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+      }
+      yield { event, data: data.join("\n") };
+    }
+  }
+}
+
 export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
   const { open, setOpen } = useCli();
   const router = useRouter();
-  const [lines, setLines] = useState<Line[]>([]);
+  const { lines, turns, history } = useSession();
   const [input, setInput] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
   const [cursor, setCursor] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [since, setSince] = useState(0);
+  // 届いている途中の回答。終わったら lines に移す
+  const [live, setLive] = useState<string | null>(null);
   const [ai, setAi] = useState<AiStatus | null>(null);
-  const [turns, setTurns] = useState<Turn[]>([]);
   const [sel, setSel] = useState(0);
   const [hideSuggest, setHideSuggest] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const mentions = useMemo(() => mentionPattern(portfolio), [portfolio]);
+
+  const addLines = (...add: Line[]) => updateSession((s) => ({ lines: [...s.lines, ...add] }));
 
   // 初めて開いたときに AI が使えるかを確かめる
   useEffect(() => {
@@ -164,43 +235,77 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     return () => clearTimeout(t);
   }, [open]);
 
+  const stop = () => abortRef.current?.abort();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
+      // 入力欄の外にいても、文字を選んでいなければ Ctrl+C で回答を止める
+      if (busy && e.ctrlKey && e.key.toLowerCase() === "c" && !window.getSelection()?.toString()) {
+        e.preventDefault();
+        abortRef.current?.abort();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  }, [open, setOpen, busy]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
-  }, [lines, busy]);
+  }, [lines, busy, live, open]);
 
   const ask = async (question: string) => {
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setBusy(true);
+    setSince(Date.now());
+    let text = "";
+    let finished = false;
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, history: turns }),
+        signal: ctrl.signal,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || typeof data.answer !== "string") {
-        setLines((prev) => [...prev, { kind: "err", text: data.error ?? "AI からの回答を取得できませんでした。" }]);
+      if (!res.ok || !res.headers.get("Content-Type")?.startsWith("text/event-stream")) {
+        const data = await res.json().catch(() => ({}));
+        addLines({ kind: "err", text: data.error ?? "AI からの回答を取得できませんでした。" });
         return;
       }
-      setLines((prev) => [...prev, { kind: "ai", text: data.answer, sources: data.sources ?? [] }]);
-      setTurns((t) => [...t, { role: "user" as const, text: question }, { role: "assistant" as const, text: data.answer }].slice(-6));
+      for await (const ev of readEvents(res)) {
+        const data = JSON.parse(ev.data);
+        if (ev.event === "delta") {
+          text += data.text;
+          setLive(text.trimStart());
+        } else if (ev.event === "done") {
+          finished = true;
+          addLines({ kind: "ai", text: data.answer, sources: data.sources ?? [] });
+          updateSession((s) => ({
+            turns: [...s.turns, { role: "user" as const, text: question }, { role: "assistant" as const, text: data.answer }],
+          }));
+        } else if (ev.event === "error") {
+          finished = true;
+          if (text.trim()) addLines({ kind: "ai", text: text.trim(), stopped: true });
+          addLines({ kind: "err", text: data.error });
+        }
+      }
+      if (!finished) throw new Error("stream ended");
     } catch {
-      setLines((prev) => [...prev, { kind: "err", text: "通信に失敗しました。もう一度試してください。" }]);
+      if (finished) return;
+      if (text.trim()) addLines({ kind: "ai", text: text.trim(), stopped: true });
+      else if (ctrl.signal.aborted) addLines({ kind: "out", text: "（Ctrl+C で止めました）" });
+      if (!ctrl.signal.aborted) addLines({ kind: "err", text: "通信に失敗しました。もう一度試してください。" });
     } finally {
+      abortRef.current = null;
+      setLive(null);
       setBusy(false);
       inputRef.current?.focus({ preventScroll: true });
     }
   };
 
-  const suggestions = busy || hideSuggest ? [] : suggest(input);
+  const suggestions = busy || hideSuggest ? [] : suggest(input, portfolio);
   const selected = suggestions[Math.min(sel, suggestions.length - 1)];
 
   const changeInput = (v: string) => {
@@ -209,23 +314,23 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     setHideSuggest(false);
   };
 
-  // 候補を確定する。引数が要るコマンドは入力欄に入れるだけ、それ以外はすぐ実行する。
-  const pick = (name: string, usage?: string) => {
-    if (usage) {
-      changeInput(`${name} `);
-      inputRef.current?.focus({ preventScroll: true });
+  // 候補を確定する。run の候補はすぐ実行し、それ以外は入力欄に入れるだけ。
+  const pick = (s: (typeof suggestions)[number]) => {
+    if (s.run) {
+      run(s.insert);
     } else {
-      run(name);
+      changeInput(s.insert);
+      inputRef.current?.focus({ preventScroll: true });
     }
   };
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selected && input.trim() !== selected.name + (selected.usage ? " " : "")) {
-      pick(selected.name, selected.usage);
+  const submit = () => {
+    if (selected && input !== selected.insert) {
+      pick(selected);
       return;
     }
-    run(input);
+    if (selected?.run) run(selected.insert);
+    else run(input);
   };
 
   const run = (text: string) => {
@@ -233,15 +338,14 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     if (!raw || busy) return;
     changeInput("");
     setCursor(null);
-    setHistory((h) => [...h, raw]);
+    updateSession((s) => ({ history: s.history[s.history.length - 1] === raw ? s.history : [...s.history, raw] }));
 
     const result = runCommand(raw, portfolio);
     if (result.clear) {
-      setLines([]);
-      setTurns([]);
+      updateSession(() => ({ lines: [], turns: [] }));
       return;
     }
-    setLines((prev) => [...prev, { kind: "cmd", text: raw }, ...result.lines]);
+    addLines({ kind: "cmd", text: raw }, ...result.lines);
     if (result.navigate) router.push(result.navigate);
     if (result.close) setOpen(false);
     if (result.ask) void ask(result.ask);
@@ -249,7 +353,29 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
 
   const aiLabel = !ai ? "確認中…" : ai.ready ? `Gemini（${ai.model}）` : ai.enabled ? (ai.problem ? `使えません（${ai.problem}）` : "資料を準備中") : "準備中（コマンドは使えます）";
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 日本語入力の変換中の Enter などは触らない
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+    const el = e.currentTarget;
+
+    if (e.ctrlKey && !e.metaKey && !e.altKey) {
+      const k = e.key.toLowerCase();
+      // 文字を選んでいるときの Ctrl+C はコピーのまま
+      if (k === "c" && el.selectionStart === el.selectionEnd) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (busy) stop();
+        else changeInput("");
+        return;
+      }
+      if (k === "l") {
+        // 画面だけ消す。AI との会話は続く（全部消すのは /clear）
+        e.preventDefault();
+        updateSession(() => ({ lines: [] }));
+        return;
+      }
+    }
+
     if (suggestions.length > 0) {
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -259,7 +385,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
       }
       if (e.key === "Tab") {
         e.preventDefault();
-        changeInput(selected.name + (selected.usage ? " " : ""));
+        changeInput(selected.insert);
         return;
       }
       if (e.key === "Escape") {
@@ -270,7 +396,17 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
         return;
       }
     }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+      return;
+    }
+
+    // 複数行のときは、先頭行で ↑・最終行で ↓ を押したときだけ履歴を呼び出す
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    if (e.key === "ArrowUp" && input.lastIndexOf("\n", el.selectionStart - 1) >= 0) return;
+    if (e.key === "ArrowDown" && input.indexOf("\n", el.selectionEnd) >= 0) return;
     if (history.length === 0) return;
     e.preventDefault();
     const next =
@@ -280,6 +416,30 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     setCursor(next);
     changeInput(next === history.length ? "" : history[next]);
   };
+
+  const answer = (key: string | number, text: string, l?: Line) => (
+    <div key={key} className="flex flex-col gap-1.5">
+      <p className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-fg">
+        <span className="mr-1 font-mono text-ok">●</span>
+        {text}
+        {l?.stopped && <span className="ml-1 text-dim">…（途中で止めました）</span>}
+      </p>
+      {l?.sources && l.sources.length > 0 && (
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-dim">
+          参照:
+          {l.sources.map((s) =>
+            s.url ? (
+              <Link key={s.url} href={s.url} className="underline decoration-line underline-offset-2 hover:text-fg">
+                {s.title}
+              </Link>
+            ) : (
+              <span key={s.title}>{s.title}</span>
+            ),
+          )}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <aside
@@ -318,35 +478,17 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
         </div>
         <p className="font-sans text-sm text-fg">
           {profile.name} について答えるターミナルです。質問を日本語でそのまま入力するか、<span className="text-accent">/</span> を打ってコマンドを選びます。
+          <span className="text-accent">@</span> で作品の名前を入れられます。
         </p>
 
         {lines.map((l, i) =>
           l.kind === "cmd" ? (
-            <p key={i} className="text-fg">
+            <p key={i} className="whitespace-pre-wrap break-words text-fg">
               <span className="text-accent">&gt; </span>
-              {l.text}
+              <WithMentions text={l.text} pattern={mentions} />
             </p>
           ) : l.kind === "ai" ? (
-            <div key={i} className="flex flex-col gap-1.5">
-              <p className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-fg">
-                <span className="mr-1 font-mono text-ok">●</span>
-                {l.text}
-              </p>
-              {l.sources && l.sources.length > 0 && (
-                <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-dim">
-                  参照:
-                  {l.sources.map((s) =>
-                    s.url ? (
-                      <Link key={s.url} href={s.url} className="underline decoration-line underline-offset-2 hover:text-fg">
-                        {s.title}
-                      </Link>
-                    ) : (
-                      <span key={s.title}>{s.title}</span>
-                    ),
-                  )}
-                </p>
-              )}
-            </div>
+            answer(i, l.text, l)
           ) : (
             <pre
               key={i}
@@ -356,56 +498,60 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
             </pre>
           ),
         )}
-        {busy && (
-          <p className="text-dim">
-            考え中 <span className="caret" aria-hidden>▍</span>
-          </p>
-        )}
+        {live && answer("live", live)}
+        {busy && <Thinking since={since} writing={!!live} />}
       </div>
 
       {suggestions.length > 0 && (
-        <ul id="cli-suggest" role="listbox" aria-label="コマンドの候補" className="mx-3 flex flex-col border-t border-line py-1">
-          {suggestions.map((c) => {
+        <ul id="cli-suggest" role="listbox" aria-label="候補" className="mx-3 flex flex-col border-t border-line py-1">
+          {suggestions.map((c, i) => {
             const active = c === selected;
             return (
               <li
-                key={c.name}
-                id={`cli-suggest-${c.name.slice(1)}`}
+                key={c.label}
+                id={`cli-suggest-${i}`}
                 role="option"
                 aria-selected={active}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  pick(c.name, c.usage);
+                  pick(c);
                 }}
                 className={`flex cursor-pointer gap-4 px-1 py-0.5 ${active ? "text-accent" : "text-dim hover:text-fg"}`}
               >
-                <span className="w-32 shrink-0">{c.usage ?? c.name}</span>
+                <span className="w-32 shrink-0 truncate">{c.label}</span>
                 <span className="min-w-0 truncate font-sans">{c.desc}</span>
               </li>
             );
           })}
         </ul>
       )}
-      <form onSubmit={submit} className="mx-3 flex items-center gap-2 border-y border-line px-1 py-2.5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        className="mx-3 flex items-start gap-2 border-y border-line px-1 py-2.5"
+      >
         <label htmlFor="cli-input" className="text-accent">
           &gt;
         </label>
-        <input
+        <textarea
           ref={inputRef}
           id="cli-input"
           value={input}
+          rows={Math.min(6, input.split("\n").length)}
           onChange={(e) => changeInput(e.target.value)}
           role="combobox"
           aria-expanded={suggestions.length > 0}
           aria-controls="cli-suggest"
           aria-autocomplete="list"
-          aria-activedescendant={selected ? `cli-suggest-${selected.name.slice(1)}` : undefined}
+          aria-activedescendant={selected ? `cli-suggest-${suggestions.indexOf(selected)}` : undefined}
           onKeyDown={onKeyDown}
-          placeholder={busy ? "回答を待っています…" : "質問するか、/ でコマンド"}
+          placeholder={busy ? "回答を待っています…（Ctrl+C で止める）" : "質問するか、/ でコマンド、@ で作品"}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent text-fg outline-none placeholder:text-dim"
+          className="min-w-0 flex-1 resize-none bg-transparent leading-normal text-fg outline-none placeholder:text-dim"
         />
       </form>
       <div className="flex flex-wrap justify-between gap-2 px-4 pb-3 pt-2 text-xs">
@@ -420,7 +566,9 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
             </span>
           )}
         </span>
-        <span className="text-dim">/ でコマンド · Esc で閉じる</span>
+        <span className="text-dim">
+          / でコマンド · @ で作品<span className="hidden lg:inline"> · Shift+Enter で改行 · Esc で閉じる</span>
+        </span>
       </div>
     </aside>
   );

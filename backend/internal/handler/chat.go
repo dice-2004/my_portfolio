@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -45,10 +47,11 @@ func (h *Chat) Status(c *gin.Context) {
 	})
 }
 
-func (h *Chat) Post(c *gin.Context) {
+// accept は質問を受け付けられるかを確かめ、回数を 1 回分使う。だめなときはエラーを返して false。
+func (h *Chat) accept(c *gin.Context) (string, []ai.Turn, bool) {
 	if !h.Gemini.Enabled() {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "AI での回答はまだ準備中です。"})
-		return
+		return "", nil, false
 	}
 	if h.Index.Len() == 0 {
 		msg := "回答に使う資料を準備しています。少し待ってからもう一度試してください。"
@@ -56,44 +59,108 @@ func (h *Chat) Post(c *gin.Context) {
 			msg = "AI の準備ができていません（" + p + "）。"
 		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": msg})
-		return
+		return "", nil, false
 	}
 
 	var req chatRequest
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 32<<10)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストの形式が正しくありません。"})
-		return
+		return "", nil, false
 	}
 	q := strings.TrimSpace(req.Question)
 	if q == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "質問が空です。"})
-		return
+		return "", nil, false
 	}
 	if len([]rune(q)) > maxQuestionChars {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "質問は 500 文字以内にしてください。"})
-		return
+		return "", nil, false
 	}
 
 	if msg := h.Limit.Take(clientIP(c)); msg != "" {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": msg})
+		return "", nil, false
+	}
+	return q, cleanHistory(req.History), true
+}
+
+// answerError は Gemini のエラーを訪問者向けの文と HTTP ステータスにする。
+func answerError(err error) (int, string) {
+	log.Printf("AI チャットのエラー: %v", err)
+	var apiErr *ai.APIError
+	if errors.As(err, &apiErr) && apiErr.Status == http.StatusTooManyRequests {
+		return http.StatusTooManyRequests, "AI の無料枠の上限に達しました。時間をおいて試してください。"
+	}
+	return http.StatusBadGateway, "AI からの回答を取得できませんでした。もう一度試してください。"
+}
+
+func (h *Chat) Post(c *gin.Context) {
+	q, history, ok := h.accept(c)
+	if !ok {
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 45*time.Second)
 	defer cancel()
-	answer, sources, err := ai.Answer(ctx, h.Gemini, h.Index, q, cleanHistory(req.History))
+	answer, sources, err := ai.Answer(ctx, h.Gemini, h.Index, q, history)
 	if err != nil {
-		log.Printf("AI チャットのエラー: %v", err)
-		var apiErr *ai.APIError
-		if errors.As(err, &apiErr) && apiErr.Status == http.StatusTooManyRequests {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": "AI の無料枠の上限に達しました。時間をおいて試してください。"})
-			return
-		}
-		c.JSON(http.StatusBadGateway, gin.H{"error": "AI からの回答を取得できませんでした。もう一度試してください。"})
+		status, msg := answerError(err)
+		c.JSON(status, gin.H{"error": msg})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"answer": answer, "sources": sources})
+}
+
+// Stream は POST /api/chat/stream。Post と同じ回答を Server-Sent Events で少しずつ返す。
+// 回数の数え方は Post と同じ（質問 1 回につき 1 回）。訪問者が止めると Gemini への通信も切る。
+//
+//	event: delta  data: {"text": "…"}            届いた分の文章
+//	event: done   data: {"answer": "…", "sources": […]}  整えた全文と出典
+//	event: error  data: {"error": "…"}           途中で失敗した
+//
+// 最初の文章が届く前に失敗したときは、Post と同じく JSON とステータスコードで返す。
+func (h *Chat) Stream(c *gin.Context) {
+	q, history, ok := h.accept(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 45*time.Second)
+	defer cancel()
+
+	started := false
+	send := func(event string, data any) {
+		if !started {
+			started = true
+			hd := c.Writer.Header()
+			hd.Set("Content-Type", "text/event-stream; charset=utf-8")
+			hd.Set("Cache-Control", "no-cache, no-transform")
+			hd.Set("X-Accel-Buffering", "no")
+			c.Status(http.StatusOK)
+		}
+		b, _ := json.Marshal(data)
+		fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", event, b)
+		c.Writer.Flush()
+	}
+
+	answer, sources, err := ai.AnswerStream(ctx, h.Gemini, h.Index, q, history, func(t string) {
+		send("delta", gin.H{"text": t})
+	})
+	if err != nil {
+		if c.Request.Context().Err() != nil {
+			return // 訪問者が止めた
+		}
+		status, msg := answerError(err)
+		if !started {
+			c.JSON(status, gin.H{"error": msg})
+			return
+		}
+		send("error", gin.H{"error": msg})
+		return
+	}
+	if sources == nil {
+		sources = []ai.Source{}
+	}
+	send("done", gin.H{"answer": answer, "sources": sources})
 }
 
 // cleanHistory は直近の会話だけを残し、user から始まって交互になるよう整える。

@@ -3,6 +3,7 @@
 package ai
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -55,6 +57,22 @@ type APIError struct {
 
 func (e *APIError) Error() string { return fmt.Sprintf("gemini: HTTP %d: %s", e.Status, e.Body) }
 
+func apiError(status int, b []byte) *APIError {
+	var e struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	msg := string(b)
+	if json.Unmarshal(b, &e) == nil && e.Error.Message != "" {
+		msg = e.Error.Message
+	}
+	if r := []rune(msg); len(r) > 300 {
+		msg = string(r[:300])
+	}
+	return &APIError{Status: status, Body: msg}
+}
+
 func (g *Gemini) post(ctx context.Context, path string, in, out any) error {
 	if !g.Enabled() {
 		return ErrNoKey
@@ -79,19 +97,7 @@ func (g *Gemini) post(ctx context.Context, path string, in, out any) error {
 		return err
 	}
 	if res.StatusCode/100 != 2 {
-		var e struct {
-			Error struct {
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		msg := string(b)
-		if json.Unmarshal(b, &e) == nil && e.Error.Message != "" {
-			msg = e.Error.Message
-		}
-		if r := []rune(msg); len(r) > 300 {
-			msg = string(r[:300])
-		}
-		return &APIError{Status: res.StatusCode, Body: msg}
+		return apiError(res.StatusCode, b)
 	}
 	return json.Unmarshal(b, out)
 }
@@ -162,8 +168,7 @@ func (g *Gemini) EmbedQuery(ctx context.Context, q string) ([]float32, error) {
 	return out.Embedding.Values, nil
 }
 
-// Generate は system と会話履歴から回答を 1 つ作る。
-func (g *Gemini) Generate(ctx context.Context, system string, turns []Turn) (string, error) {
+func generateRequest(system string, turns []Turn) map[string]any {
 	contents := make([]content, len(turns))
 	for i, t := range turns {
 		role := "user"
@@ -172,25 +177,90 @@ func (g *Gemini) Generate(ctx context.Context, system string, turns []Turn) (str
 		}
 		contents[i] = content{Role: role, Parts: []part{{Text: t.Text}}}
 	}
-	in := map[string]any{
+	return map[string]any{
 		"systemInstruction": content{Parts: []part{{Text: system}}},
 		"contents":          contents,
 		"generationConfig":  map[string]any{"temperature": 0.3, "maxOutputTokens": 800},
 	}
-	var out struct {
-		Candidates []struct {
-			Content content `json:"content"`
-		} `json:"candidates"`
+}
+
+type generateResponse struct {
+	Candidates []struct {
+		Content content `json:"content"`
+	} `json:"candidates"`
+}
+
+func (r generateResponse) text() string {
+	if len(r.Candidates) == 0 {
+		return ""
 	}
-	if err := g.post(ctx, "/models/"+g.ChatModel+":generateContent", in, &out); err != nil {
+	var text string
+	for _, p := range r.Candidates[0].Content.Parts {
+		text += p.Text
+	}
+	return text
+}
+
+// Generate は system と会話履歴から回答を 1 つ作る。
+func (g *Gemini) Generate(ctx context.Context, system string, turns []Turn) (string, error) {
+	var out generateResponse
+	if err := g.post(ctx, "/models/"+g.ChatModel+":generateContent", generateRequest(system, turns), &out); err != nil {
 		return "", err
 	}
 	if len(out.Candidates) == 0 {
 		return "", errors.New("gemini: 回答が空でした")
 	}
-	var text string
-	for _, p := range out.Candidates[0].Content.Parts {
-		text += p.Text
+	return out.text(), nil
+}
+
+// GenerateStream は Generate と同じ回答を、届いた分から onText に渡しながら作る（streamGenerateContent の SSE）。
+// Gemini が 2xx 以外を返したときは onText を 1 度も呼ばずに APIError を返す。
+func (g *Gemini) GenerateStream(ctx context.Context, system string, turns []Turn, onText func(string)) (string, error) {
+	if !g.Enabled() {
+		return "", ErrNoKey
 	}
-	return text, nil
+	body, err := json.Marshal(generateRequest(system, turns))
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.BaseURL+"/models/"+g.ChatModel+":streamGenerateContent?alt=sse", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", g.APIKey)
+	res, err := g.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 != 2 {
+		b, _ := io.ReadAll(io.LimitReader(res.Body, 64<<10))
+		return "", apiError(res.StatusCode, b)
+	}
+
+	var text strings.Builder
+	sc := bufio.NewScanner(res.Body)
+	sc.Buffer(make([]byte, 64<<10), 4<<20)
+	for sc.Scan() {
+		data, ok := strings.CutPrefix(sc.Text(), "data:")
+		if !ok {
+			continue
+		}
+		var chunk generateResponse
+		if err := json.Unmarshal([]byte(strings.TrimSpace(data)), &chunk); err != nil {
+			return text.String(), fmt.Errorf("gemini: ストリームを読めません: %w", err)
+		}
+		if t := chunk.text(); t != "" {
+			text.WriteString(t)
+			onText(t)
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return text.String(), err
+	}
+	if text.Len() == 0 {
+		return "", errors.New("gemini: 回答が空でした")
+	}
+	return text.String(), nil
 }
