@@ -90,14 +90,17 @@ Self-hosted LiveSync の作者が出している [livesync-bridge](https://githu
 
 #### 1. Obsidian の設定から値を控える
 
-ノート PC の Obsidian で、Self-hosted LiveSync の設定を開いて次を控える。
+ノート PC の Obsidian で、Self-hosted LiveSync の設定を開いて次を控える。画面の名前は Self-hosted LiveSync 1.0.36 の日本語表示のもの。
 
 | 控えるもの | 場所 |
 |---|---|
-| ユーザー名・パスワード・データベース名 | Remote Configuration の CouchDB の設定 |
-| 合言葉（Passphrase） | End-to-End Encryption の設定 |
-| Obfuscate Properties が有効か | 同じ画面 |
-| ID キー（recovery code） | 同じ画面の **Show current recovery code**。`sls-id-v1:` で始まる文字列。このボタンが無ければ ID キーは使っていない |
+| ユーザー名・パスワード・データベース名 | リモートの CouchDB の設定。パスワードは表示されないので、クイックセットアップで入れたものを使う |
+| 合言葉（Passphrase） | 「E2EE 設定」の「E2EE を設定」ボタンで開く画面 |
+| ID キー（recovery code） | 同じ画面の **Show current recovery code**。`sls-id-v1:` で始まる文字列 |
+
+- 「E2EE を設定」の画面が無い、または Show current recovery code が無いときは、ID キーは使っていない。`config.json` の `idDerivationKey` の行を消す
+- ID キーが要るのに書いていないと、起動時に `Direct database document IDs do not match the configured ID key.` と出て止まる（何も書き出さない）。そのときに探せばよい
+- `obfuscatePassphrase` には合言葉と同じものを書く。Obsidian 側の Obfuscate Properties が無効でも、このままで書き出せることを確かめた
 
 #### 2. CouchDB への接続先
 
@@ -138,7 +141,7 @@ chown 1993:1993 vault        # コンテナの中の deno ユーザー（UID 199
       "username": "（ユーザー名）",
       "password": "（パスワード）",
       "passphrase": "（合言葉）",
-      "obfuscatePassphrase": "（Obfuscate Properties が有効なら合言葉と同じもの。無効なら中身を空にする）",
+      "obfuscatePassphrase": "（合言葉と同じもの）",
       "idDerivationKey": "（sls-id-v1: で始まる ID キー。使っていなければこの行ごと消す）",
       "baseDir": "",
       "useRemoteTweaks": true
