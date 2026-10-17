@@ -81,7 +81,6 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
       }
       setLines((prev) => [...prev, { kind: "ai", text: data.answer, sources: data.sources ?? [] }]);
       setTurns((t) => [...t, { role: "user" as const, text: question }, { role: "assistant" as const, text: data.answer }].slice(-6));
-      setAi((s) => (s ? { ...s, remaining: Math.max(0, s.remaining - 1) } : s));
     } catch {
       setLines((prev) => [...prev, { kind: "err", text: "通信に失敗しました。もう一度試してください。" }]);
     } finally {
@@ -226,7 +225,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
         <span>
           {ai?.ready ? (
             <span className="text-dim">
-              <span className="text-accent">▸▸</span> AI に質問できます（今日の残り {ai.remaining} 回）
+              <span className="text-accent">▸▸</span> AI に質問できます
             </span>
           ) : (
             <span className="text-dim">
