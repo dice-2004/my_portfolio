@@ -1,26 +1,135 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCli } from "./CliContext";
 import { profile } from "@/content/profile";
 import type { Portfolio } from "@/lib/portfolio";
-import { runCommand, type Line } from "./commands";
+import { runCommand, suggest, type Line } from "./commands";
+import { SPRITES } from "./sprites";
 
 const VERSION = "v0.2.0";
 
 type AiStatus = { enabled: boolean; ready: boolean; model: string; remaining: number; problem?: string };
 type Turn = { role: "user" | "assistant"; text: string };
 
-function DiceMark() {
-  // サイコロの「3」の目。ロゴ代わり。
+// パネル幅（PC のみ）。ドラッグで変えた幅はこのブラウザに覚えておく。
+const WIDTH_KEY = "cli-panel-width";
+const MIN_W = 360;
+const MAX_VW = 0.7;
+
+function applyWidth(px: number | null) {
+  const root = document.documentElement.style;
+  if (px === null) root.removeProperty("--panel-w");
+  else root.setProperty("--panel-w", `min(${Math.round(px)}px, ${MAX_VW * 100}vw)`);
+}
+
+function clampWidth(px: number) {
+  return Math.min(Math.max(px, MIN_W), window.innerWidth * MAX_VW);
+}
+
+/** パネル左端のつまみ。ドラッグか ← → キーで幅を変え、ダブルクリックで元に戻す。 */
+function ResizeHandle() {
+  const width = useRef<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(WIDTH_KEY));
+      if (saved > 0) {
+        applyWidth(saved);
+        width.current = saved;
+      }
+    } catch {}
+  }, []);
+
+  const commit = (px: number | null) => {
+    applyWidth(px);
+    width.current = px;
+    try {
+      if (px === null) localStorage.removeItem(WIDTH_KEY);
+      else localStorage.setItem(WIDTH_KEY, String(Math.round(px)));
+    } catch {}
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    document.documentElement.dataset.resizing = "true";
+    let last = width.current;
+    const move = (ev: PointerEvent) => {
+      last = clampWidth(window.innerWidth - ev.clientX);
+      applyWidth(last);
+    };
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      delete document.documentElement.dataset.resizing;
+      if (last !== null) commit(last);
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const current = width.current ?? document.getElementById("cli-panel")?.offsetWidth ?? 560;
+    commit(clampWidth(current + (e.key === "ArrowLeft" ? 32 : -32)));
+  };
+
   return (
-    <div aria-hidden className="grid shrink-0 grid-cols-3 gap-[3px] rounded-[3px] bg-accent p-1">
-      {Array.from({ length: 9 }, (_, i) => (
-        <i key={i} className={`block h-2 w-2 ${i === 0 || i === 4 || i === 8 ? "bg-panel" : ""}`} />
-      ))}
-    </div>
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="パネルの幅を変える（← → キー、ダブルクリックで元に戻す）"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+      onDoubleClick={() => commit(null)}
+      className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize touch-none hover:bg-accent/40 focus-visible:bg-accent/40 lg:block"
+    />
+  );
+}
+
+// ページを開いたときに 1 回だけ選ぶ。サーバーでは選ばず（-1）、ブラウザで選んだものを使う。
+let pickedSprite = -1;
+const pickSprite = () => {
+  if (pickedSprite < 0) pickedSprite = Math.floor(Math.random() * SPRITES.length);
+  return pickedSprite;
+};
+const noSubscribe = () => () => {};
+
+/** 左上のドット絵。animate の間はフレームを順に切り替える。 */
+function PixelMark({ animate }: { animate: boolean }) {
+  const index = useSyncExternalStore(noSubscribe, pickSprite, () => -1);
+  const [tick, setTick] = useState(0);
+  const sprite = index >= 0 ? SPRITES[index] : null;
+  const frameCount = sprite?.frames.length ?? 1;
+
+  useEffect(() => {
+    if (!animate || frameCount < 2) return;
+    const t = setInterval(() => setTick((n) => n + 1), 140);
+    return () => clearInterval(t);
+  }, [animate, frameCount]);
+
+  // 横 96px・縦 52px に収まる範囲で、1 ドットをできるだけ大きくする
+  const w = sprite?.frames[0][0].length ?? 16;
+  const h = sprite?.frames[0].length ?? 11;
+  const dot = Math.max(2, Math.floor(Math.min(96 / w, 52 / h)));
+  const frame = sprite ? sprite.frames[animate ? tick % frameCount : 0] : [];
+
+  return (
+    <svg aria-hidden viewBox={`0 0 ${w} ${h}`} width={w * dot} height={h * dot} shapeRendering="crispEdges" className="mt-1 shrink-0">
+      {frame.flatMap((row, y) =>
+        [...row].map((c, x) =>
+          sprite && sprite.palette[c] ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={sprite.palette[c]} /> : null,
+        ),
+      )}
+    </svg>
   );
 }
 
@@ -34,6 +143,8 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
   const [busy, setBusy] = useState(false);
   const [ai, setAi] = useState<AiStatus | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [sel, setSel] = useState(0);
+  const [hideSuggest, setHideSuggest] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -89,11 +200,38 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
     }
   };
 
+  const suggestions = busy || hideSuggest ? [] : suggest(input);
+  const selected = suggestions[Math.min(sel, suggestions.length - 1)];
+
+  const changeInput = (v: string) => {
+    setInput(v);
+    setSel(0);
+    setHideSuggest(false);
+  };
+
+  // 候補を確定する。引数が要るコマンドは入力欄に入れるだけ、それ以外はすぐ実行する。
+  const pick = (name: string, usage?: string) => {
+    if (usage) {
+      changeInput(`${name} `);
+      inputRef.current?.focus({ preventScroll: true });
+    } else {
+      run(name);
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = input.trim();
+    if (selected && input.trim() !== selected.name + (selected.usage ? " " : "")) {
+      pick(selected.name, selected.usage);
+      return;
+    }
+    run(input);
+  };
+
+  const run = (text: string) => {
+    const raw = text.trim();
     if (!raw || busy) return;
-    setInput("");
+    changeInput("");
     setCursor(null);
     setHistory((h) => [...h, raw]);
 
@@ -112,6 +250,26 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
   const aiLabel = !ai ? "確認中…" : ai.ready ? `Gemini（${ai.model}）` : ai.enabled ? (ai.problem ? `使えません（${ai.problem}）` : "資料を準備中") : "準備中（コマンドは使えます）";
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const n = suggestions.length;
+        setSel((i) => (Math.min(i, n - 1) + (e.key === "ArrowUp" ? n - 1 : 1)) % n);
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        changeInput(selected.name + (selected.usage ? " " : ""));
+        return;
+      }
+      if (e.key === "Escape") {
+        // 候補だけ閉じて、パネルは閉じない
+        e.preventDefault();
+        e.stopPropagation();
+        setHideSuggest(true);
+        return;
+      }
+    }
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
     if (history.length === 0) return;
     e.preventDefault();
@@ -120,7 +278,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
         ? Math.max(0, (cursor ?? history.length) - 1)
         : Math.min(history.length, (cursor ?? history.length) + 1);
     setCursor(next);
-    setInput(next === history.length ? "" : history[next]);
+    changeInput(next === history.length ? "" : history[next]);
   };
 
   return (
@@ -132,6 +290,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
       data-open={open}
       className="cli-panel fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-line bg-panel font-mono text-[13px] text-fg lg:w-[var(--panel-w)]"
     >
+      <ResizeHandle />
       <div className="flex items-center justify-between border-b border-line px-4 py-2 text-xs text-dim">
         <span>
           ターミナル　<span className="text-fg">dice-cli</span>
@@ -148,7 +307,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
 
       <div ref={logRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" aria-live="polite">
         <div className="flex items-start gap-3 leading-relaxed">
-          <DiceMark />
+          <PixelMark animate={busy} />
           <p>
             <span className="font-bold">dice-cli</span> <span className="text-dim">{VERSION}</span>
             <br />
@@ -158,7 +317,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
           </p>
         </div>
         <p className="font-sans text-sm text-fg">
-          {profile.name} について答えるターミナルです。質問を日本語でそのまま入力するか、<span className="text-accent">help</span> でコマンド一覧を表示します。
+          {profile.name} について答えるターミナルです。質問を日本語でそのまま入力するか、<span className="text-accent">/</span> を打ってコマンドを選びます。
         </p>
 
         {lines.map((l, i) =>
@@ -204,6 +363,29 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
         )}
       </div>
 
+      {suggestions.length > 0 && (
+        <ul id="cli-suggest" role="listbox" aria-label="コマンドの候補" className="mx-3 flex flex-col border-t border-line py-1">
+          {suggestions.map((c) => {
+            const active = c === selected;
+            return (
+              <li
+                key={c.name}
+                id={`cli-suggest-${c.name.slice(1)}`}
+                role="option"
+                aria-selected={active}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pick(c.name, c.usage);
+                }}
+                className={`flex cursor-pointer gap-4 px-1 py-0.5 ${active ? "text-accent" : "text-dim hover:text-fg"}`}
+              >
+                <span className="w-32 shrink-0">{c.usage ?? c.name}</span>
+                <span className="min-w-0 truncate font-sans">{c.desc}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <form onSubmit={submit} className="mx-3 flex items-center gap-2 border-y border-line px-1 py-2.5">
         <label htmlFor="cli-input" className="text-accent">
           &gt;
@@ -212,9 +394,14 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
           ref={inputRef}
           id="cli-input"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => changeInput(e.target.value)}
+          role="combobox"
+          aria-expanded={suggestions.length > 0}
+          aria-controls="cli-suggest"
+          aria-autocomplete="list"
+          aria-activedescendant={selected ? `cli-suggest-${selected.name.slice(1)}` : undefined}
           onKeyDown={onKeyDown}
-          placeholder={busy ? "回答を待っています…" : "質問か、help などのコマンド"}
+          placeholder={busy ? "回答を待っています…" : "質問するか、/ でコマンド"}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
@@ -233,7 +420,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
             </span>
           )}
         </span>
-        <span className="text-dim">Esc で閉じる</span>
+        <span className="text-dim">/ でコマンド · Esc で閉じる</span>
       </div>
     </aside>
   );

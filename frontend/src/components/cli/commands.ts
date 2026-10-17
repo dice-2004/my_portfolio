@@ -20,74 +20,88 @@ export interface CommandResult {
 const out = (text: string): CommandResult => ({ lines: [{ kind: "out", text }] });
 const err = (text: string): CommandResult => ({ lines: [{ kind: "err", text }] });
 
-const HELP = [
-  "whoami         自己紹介",
-  "ls works       作品の一覧（★は受賞作）",
-  "cat awards     受賞歴",
-  "skills         スキル",
-  "open <番号>    作品ページを開く（例: open 1）",
-  "clear          画面を消す",
-  "exit           パネルを閉じる",
-  "",
-  "それ以外の文章は AI への質問として扱います（例: どんなチーム開発をしてきた？）。",
-].join("\n");
-
+// 1 列目は ASCII だけにして、スペースで桁を揃える（全角の幅はフォント次第で揃わないため）
 function pad(s: string, n: number): string {
-  // 全角は2桁として数える
-  const w = [...s].reduce((a, c) => a + (c.charCodeAt(0) > 0xff ? 2 : 1), 0);
-  return s + " ".repeat(Math.max(1, n - w));
+  return s + " ".repeat(Math.max(1, n - s.length));
 }
 
+/** スラッシュコマンドの一覧。入力欄の候補表示と /help の両方で使う。 */
+export const COMMANDS: { name: string; usage?: string; desc: string }[] = [
+  { name: "/help", desc: "コマンドの一覧" },
+  { name: "/whoami", desc: "自己紹介" },
+  { name: "/works", desc: "作品の一覧（★は受賞作）" },
+  { name: "/open", usage: "/open <n>", desc: "n 番の作品ページを開く（例: /open 1）" },
+  { name: "/awards", desc: "受賞歴" },
+  { name: "/skills", desc: "スキル" },
+  { name: "/clear", desc: "画面と会話を消す" },
+  { name: "/exit", desc: "パネルを閉じる" },
+];
+
+/** 入力中の文字列に合うコマンド。"/" で始まり、まだ引数を打っていないときだけ出す。 */
+export function suggest(input: string): typeof COMMANDS {
+  if (!input.startsWith("/") || /\s/.test(input)) return [];
+  const q = input.toLowerCase();
+  return COMMANDS.filter((c) => c.name.startsWith(q));
+}
+
+const HELP = [
+  ...COMMANDS.map((c) => `${pad(c.usage ?? c.name, 15)}${c.desc}`),
+  "",
+  "/ で始まらない文章は AI への質問として扱います（例: どんなチーム開発をしてきた？）。",
+].join("\n");
+
 export function runCommand(raw: string, data: Portfolio): CommandResult {
-  const [cmd, ...rest] = raw.trim().split(/\s+/);
+  const text = raw.trim();
+  // 「help」だけは / なしでも受け付ける（AI に送ると回数を無駄にするため）
+  if (text === "help" || text === "?") return out(HELP);
+  if (!text.startsWith("/")) return { lines: [], ask: text };
+
+  const [cmd, ...rest] = text.split(/\s+/);
   const arg = rest.join(" ");
   const works = data.works.map(toWorkView);
 
   switch (cmd.toLowerCase()) {
-    case "help":
-    case "?":
+    case "/help":
       return out(HELP);
 
-    case "whoami":
+    case "/whoami":
       return out(`${profile.name} (${profile.handle})\n${profile.affiliation}\n${profile.tagline}`);
 
-    case "ls":
-      if (arg && arg !== "works") return err(`ls: ${arg}: そのような項目はありません（ls works を試してください）`);
+    case "/works":
       if (works.length === 0) return err("作品データを読み込めませんでした。");
       return out(
         works
-          .map((w, i) => `${String(i + 1).padStart(2, " ")}  ${w.award ? "★" : " "} ${pad(w.title, 30)}${w.period}`)
-          .join("\n") + "\n\nopen <番号> で作品ページを開きます。",
+          .map((w, i) => `${String(i + 1).padStart(2, " ")}  ${w.award ? "★" : " "} ${w.title}${w.period ? `  · ${w.period}` : ""}`)
+          .join("\n") + "\n\n/open <n> で n 番の作品ページを開きます。",
       );
 
-    case "cat": {
-      if (arg !== "awards") return err(`cat: ${arg || "(なし)"}: そのような項目はありません（cat awards を試してください）`);
+    case "/awards": {
       const awarded = works.filter((w) => w.award);
       if (awarded.length === 0) return out("受賞歴のデータがありません。");
-      return out(awarded.map((w) => `${pad(w.award ?? "", 44)}${w.title}`).join("\n"));
+      return out(awarded.map((w) => `★ ${w.title}  · ${w.award}`).join("\n"));
     }
 
-    case "skills": {
+    case "/skills": {
       if (data.skills.length === 0) return out("スキルのデータがありません。");
       const byCat = new Map<string, string[]>();
       for (const s of data.skills) byCat.set(s.category || "その他", [...(byCat.get(s.category || "その他") ?? []), s.name]);
-      return out([...byCat].map(([c, names]) => `${pad(c, 12)}${names.join(", ")}`).join("\n"));
+      return out([...byCat].map(([c, names]) => `${c}\n  ${names.join(", ")}`).join("\n\n"));
     }
 
-    case "open": {
+    case "/open": {
       const n = Number(arg);
       const target = Number.isInteger(n) && n >= 1 ? works[n - 1] : works.find((w) => w.title.toLowerCase() === arg.toLowerCase());
-      if (!target) return err(`open: ${arg || "(なし)"} が見つかりません。ls works で番号を確認してください。`);
+      if (!target) return err(`/open: ${arg || "(なし)"} が見つかりません。/works で番号を確認してください。`);
       return { lines: [{ kind: "out", text: `→ ${target.title} を開きます` }], navigate: `/works/${target.id}` };
     }
 
-    case "clear":
+    case "/clear":
       return { lines: [], clear: true };
 
-    case "exit":
+    case "/exit":
       return { lines: [], close: true };
 
     default:
-      return { lines: [], ask: raw.trim() };
+      return err(`${cmd}: そのようなコマンドはありません。/help で一覧を表示します。`);
   }
 }
