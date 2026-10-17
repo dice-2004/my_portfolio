@@ -78,6 +78,16 @@ h3 {
   transform: none;
 }
 
+/* パネル幅をドラッグしている間はアニメーションと文字選択を止める */
+html[data-resizing] .site-shell,
+html[data-resizing] .cli-panel {
+  transition: none;
+}
+html[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
 @keyframes caret-blink {
   50% {
     opacity: 0;

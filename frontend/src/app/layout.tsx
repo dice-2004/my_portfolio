@@ -50,7 +50,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // CLI パネルの即答コマンド（ls works など）用。page と同じ fetch なので Next.js のキャッシュで重複しない。
+  // CLI パネルの即答コマンド（/works など）用。page と同じ fetch なので Next.js のキャッシュで重複しない。
   const portfolio = await getPortfolio();
 
   return (
