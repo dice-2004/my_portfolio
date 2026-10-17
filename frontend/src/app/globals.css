@@ -28,8 +28,8 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-ok: var(--ok);
-  --font-sans: var(--font-plex-jp), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: "IBM Plex Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
 html,
