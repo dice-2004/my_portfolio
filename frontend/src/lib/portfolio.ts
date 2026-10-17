@@ -44,8 +44,10 @@ export interface Portfolio {
 }
 
 // Docker 内では サービス名 backend で通信する。開発時は compose が公開している 8031 番。
+// BACKEND_URL を書けばそちらを使う（docker-compose.dev.yml の開発サーバーなど）。
 export const API_BASE =
-  process.env.NODE_ENV === "production" ? "http://backend:8080" : "http://localhost:8031";
+  process.env.BACKEND_URL ??
+  (process.env.NODE_ENV === "production" ? "http://backend:8080" : "http://localhost:8031");
 
 async function getJSON<T>(path: string, fallback: T): Promise<T> {
   try {

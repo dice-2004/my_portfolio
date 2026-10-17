@@ -1,0 +1,46 @@
+# 開発用。ソースをマウントして、保存するたびに自動で再ビルド・再読み込みする。
+#   docker compose -f docker-compose.dev.yml up
+# 本番用は docker-compose.yml（ビルド済みのイメージで動かす）
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend.dev
+      network: host
+    container_name: portfolio-backend
+    ports:
+      - "8031:8080"
+    volumes:
+      - ./backend:/app
+      - ${OBSIDIAN_VAULT_DIR:-./docker/no-vault}:/vault:ro
+    environment:
+      - PORT=8080
+      - DB_PATH=/app/data/portfolio.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - CHAT_DAILY_LIMIT=${CHAT_DAILY_LIMIT:-400}
+      - OBSIDIAN_VAULT=${OBSIDIAN_VAULT_DIR:+/vault}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8080/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend.dev
+      network: host
+    container_name: portfolio-frontend
+    ports:
+      - "3031:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      # コンテナの中からは サービス名 backend で API に届く
+      - BACKEND_URL=http://backend:8080
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      backend:
+        condition: service_healthy

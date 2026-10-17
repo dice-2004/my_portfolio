@@ -28,3 +28,7 @@ frontend/replace.js
 # TypeScript
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
+
+# テスト（Playwright）の結果
+frontend/test-results/
+frontend/playwright-report/

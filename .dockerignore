@@ -1,0 +1,9 @@
+# docker build に送らないもの（イメージの中で作り直す / 秘密情報）
+.git
+.env*
+**/node_modules
+frontend/.next
+frontend/test-results
+frontend/playwright-report
+backend/tmp
+backend/data

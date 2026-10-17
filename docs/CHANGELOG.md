@@ -166,3 +166,18 @@
   - dice さんの添削どおり、Kotlin、Bash、React、Tailwind CSS、YOLO、Notion API、Gemini API をスキル一覧から外した（`backend/seeds/skills.json`）。
   - 「Proxmox VE / LXC」を「Proxmox」に、「Arduino / M5Stack」を「M5Stack」にした。空になった分類はない。
   - 作品ページの技術スタックはその作品で使ったものなので、そのまま残している。
+
+---
+
+### [2026-10-17] 本番の起動方法とフロントエンドのテスト
+* **ステータス**: PR 作成済み（dice さんの確認待ち）
+* **作業内容**:
+  - 本番用の `docker-compose.yml` をビルド済みイメージで動かす形にした。frontend は `next build` をイメージを作るときに 1 回だけ行い（`output: "standalone"`）、backend は Go のバイナリ 1 つで動く（air を使わない）。クラウドで試したところ、ビルド済みなら `docker compose up -d` から 6 秒で表示できた。
+  - 作品などのファイル（`backend/seeds`）はイメージに焼かずにマウントしているので、今までどおり `git pull` だけで 30 秒以内に反映される（クラウドで 15 秒で反映されるのを確認）。DB は以前と同じ `backend/data/` に残る。
+  - 開発用（ホットリロード）は `docker-compose.dev.yml` に分けた（`docker compose -f docker-compose.dev.yml up`）。
+  - トップのページをビルド時ではなくアクセス時に作るようにした（`layout.tsx` の `connection()`）。イメージはバックエンドの無い場所でビルドするので、ビルド時に作ると中身が空のページが配られるため。API の結果は 60 秒キャッシュするのは変わらない。
+  - backend の healthcheck は wget の代わりに `server healthcheck` を使う。
+  - 手順は `docs/deploy.md`。
+  - フロントエンドのテストを足した。Vitest で作品説明の分解（`portfolio.ts`）と CLI のコマンド（`commands.ts`）、Playwright でトップ・作品ページ・CLI パネルの操作と、axe による文字のコントラスト（4.5:1）の確認。PC とスマホの 2 画面で動かす。CI で毎回走る。本番イメージのビルドも CI で確かめる。
+* **次にやること**:
+  - main へのマージ後の自動反映の方法を dice さんが決める（cron の git pull / Actions の self-hosted runner / Watchtower）。

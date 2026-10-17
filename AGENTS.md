@@ -13,7 +13,8 @@ AIエージェント（Claude Code など）と人間の開発者向けの、こ
 | `backend/internal/ai/` | AI チャット。Gemini API クライアント、資料のチャンク分割、埋め込みの保存と検索（SQLite の `chunks`）、回答の生成 |
 | `backend/seeds/knowledge/` | （任意）サイトには出さないが AI チャットに答えさせたい補足の Markdown |
 | `scripts/sync-obsidian.sh` | private-appserver の Vault から、obsidianignore で除外されていないノートだけを public-appserver へ rsync する（手順は `docs/obsidian-sync.md`） |
-| `docker/`, `docker-compose.yml` | 本番（N100 + Cloudflare Tunnel）と同じ構成のコンテナ |
+| `docker/`, `docker-compose.yml` | 本番（N100 + Cloudflare Tunnel）用。ビルド済みのイメージで動かす（`docs/deploy.md`） |
+| `docker-compose.dev.yml` | 開発用。ソースをマウントして `npm run dev` と air で動かす |
 | `docs/archive/` | 初期の設計書。現在の方針とは異なる部分があるので参考程度に |
 
 ## コマンド
@@ -24,7 +25,9 @@ cd frontend
 npm ci
 npm run lint          # ESLint（error は CI で落ちる）
 npx tsc --noEmit      # 型チェック
+npm test              # 単体テスト（Vitest。src/**/*.test.ts）
 npm run build         # 本番ビルド（バックエンドが無くてもビルドは通る）
+npm run test:e2e      # 画面のテスト（Playwright。Go のバックエンドも起動する。初回は npx playwright install chromium）
 
 # バックエンド
 cd backend
@@ -32,8 +35,9 @@ go vet ./...
 go build ./...
 go test ./...
 
-# 全体をコンテナで起動
-docker compose up -d   # frontend: http://localhost:3031 / backend: http://localhost:8031
+# 全体をコンテナで起動（frontend: http://localhost:3031 / backend: http://localhost:8031）
+docker compose up -d --build                  # 本番と同じビルド済みイメージ
+docker compose -f docker-compose.dev.yml up   # 開発用（ホットリロード）
 ```
 
 push 前に上のチェックを通すこと。同じ内容が `.github/workflows/ci.yml` で PR ごとに走ります。

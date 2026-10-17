@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 // フォントは npm パッケージから読み、サイト自身から配る。ビルド時に Google Fonts へ取りに行かないので、
 // ネットワークが不安定なサーバーでもビルドが失敗しない。
 import "@fontsource/ibm-plex-sans-jp/400.css";
@@ -50,6 +51,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ビルド時に HTML を作らず、アクセスが来てから作る。本番イメージはバックエンドの無い場所でビルドするので、
+  // ビルド時に作ると中身が空のページが配られてしまう。API の結果は fetch のキャッシュで 60 秒使い回す。
+  await connection();
   // CLI パネルの即答コマンド（/works など）用。page と同じ fetch なので Next.js のキャッシュで重複しない。
   const portfolio = await getPortfolio();
 

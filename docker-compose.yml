@@ -1,3 +1,10 @@
+# 本番用（public-appserver で動かす構成）。
+#   起動・更新:  docker compose up -d --build
+# イメージの中でビルド済みなので、起動のたびに npm install や go build はしない。
+# 作品などのファイル（backend/seeds）はマウントしているので、git pull だけで 30 秒以内に反映される。
+# コード（frontend/ や backend/ の .go など）を変えたときだけ --build で作り直す。
+# 開発用（ホットリロード）は docker-compose.dev.yml
+
 services:
   backend:
     build:
@@ -5,16 +12,17 @@ services:
       dockerfile: docker/Dockerfile.backend
       network: host
     container_name: portfolio-backend
+    restart: unless-stopped
     ports:
       - "8031:8080"
     volumes:
-      - ./backend:/app
+      - ./backend/seeds:/app/seeds:ro
+      # DB（AI の埋め込みもここに入る。消しても seeds から作り直せるが、埋め込みは無料枠を使って作り直しになる）
+      - ./backend/data:/app/data
       # Obsidian のノート。.env の OBSIDIAN_VAULT_DIR に書いたフォルダを読み取り専用でマウントする（手順は docs/obsidian-sync.md）
       - ${OBSIDIAN_VAULT_DIR:-./docker/no-vault}:/vault:ro
     environment:
-      - PORT=8080
       - DB_PATH=/app/data/portfolio.db
-      - GIN_MODE=release
       # AI チャット。キーはリポジトリ直下の .env（.env.example をコピー、git 管理外）に書く。無ければチャットは無効
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - CHAT_DAILY_LIMIT=${CHAT_DAILY_LIMIT:-400}
@@ -22,11 +30,11 @@ services:
       # （Vault 内に obsidianignore（.md 付きでも可）が 1 つも無いと、安全のため読み込まない）
       - OBSIDIAN_VAULT=${OBSIDIAN_VAULT_DIR:+/vault}
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O /dev/null http://localhost:8080/api/health || exit 1"]
-      interval: 5s
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 10s
       timeout: 3s
-      retries: 60
-      start_period: 60s
+      retries: 30
+      start_period: 30s
 
   frontend:
     build:
@@ -34,21 +42,9 @@ services:
       dockerfile: docker/Dockerfile.frontend
       network: host
     container_name: portfolio-frontend
+    restart: unless-stopped
     ports:
       - "3031:3000"
-    volumes:
-      - ./frontend:/app
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://portfolio.dice-ke.tech
-    #=========================================================
-    # 【起動モードの切り替え】
-    # 開発用 (Hot Reload有効):   command: npm run dev
-    # 本番用 (Build & Start):   command: sh -c "npm install --include=dev && npm run build && npm run start"
-    # ※ 本番用の場合は下の行のコメントアウトを外し、上の行を隠してください
-    #=========================================================
-    # command: npm run dev
-    command: sh -c "npm install --include=dev && npm run build && npm run start"
     depends_on:
       backend:
         condition: service_healthy

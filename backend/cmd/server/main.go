@@ -13,6 +13,11 @@ import (
 )
 
 func main() {
+	// 「server healthcheck」で起動すると、動いているサーバーの /api/health を確かめて終わる。
+	// 本番イメージには wget も curl も無いので、docker の healthcheck はこれを使う。
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		os.Exit(healthcheck())
+	}
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
@@ -82,4 +87,23 @@ func main() {
 	log.Printf("Server is running on http://localhost:%s", port)
 
 	r.Run(":" + port)
+}
+
+func healthcheck() int {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	res, err := client.Get("http://localhost:" + port + "/api/health")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "status", res.StatusCode)
+		return 1
+	}
+	return 0
 }

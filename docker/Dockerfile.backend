@@ -1,9 +1,23 @@
-FROM golang:1.26.1-bookworm
+# 本番用のバックエンド。Go のバイナリを 1 回だけビルドして、小さなイメージで動かす。
+# 開発用（air で自動再ビルド）は Dockerfile.backend.dev
 
+FROM golang:1.26.1-bookworm AS build
+WORKDIR /src
 ENV CGO_ENABLED=0
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+COPY backend/ ./
+RUN go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
+FROM debian:bookworm-slim
+# Gemini API へ HTTPS でつなぐための証明書。apt を使わずビルド用のイメージから持ってくる
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 WORKDIR /app
-
-RUN go install github.com/air-verse/air@latest
-
-CMD ["air", "-c", ".air.toml"]
+COPY backend/migrations/ ./migrations/
+# 作品などのファイル。compose ではリポジトリの backend/seeds を上からマウントするので、git pull だけで反映される
+COPY backend/seeds/ ./seeds/
+COPY --from=build /out/server ./server
+ENV PORT=8080 GIN_MODE=release
+EXPOSE 8080
+# docker-compose.yml の healthcheck は「/app/server healthcheck」（wget などを入れずに済む）
+CMD ["/app/server"]
