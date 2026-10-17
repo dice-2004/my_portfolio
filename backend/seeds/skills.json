@@ -1,6 +1,132 @@
 [
-  { "name": "Go", "category": "Backend", "proficiency": 80, "display_order": 1 },
-  { "name": "Python", "category": "Backend", "proficiency": 90, "display_order": 2 },
-  { "name": "TypeScript", "category": "Frontend", "proficiency": 75, "display_order": 3 },
-  { "name": "Docker", "category": "DevOps", "proficiency": 70, "display_order": 4 }
+  {
+    "name": "Python",
+    "category": "言語",
+    "display_order": 1
+  },
+  {
+    "name": "Go",
+    "category": "言語",
+    "display_order": 2
+  },
+  {
+    "name": "C",
+    "category": "言語",
+    "display_order": 3
+  },
+  {
+    "name": "TypeScript",
+    "category": "言語",
+    "display_order": 4
+  },
+  {
+    "name": "C++",
+    "category": "言語",
+    "display_order": 5
+  },
+  {
+    "name": "Kotlin",
+    "category": "言語",
+    "display_order": 6
+  },
+  {
+    "name": "Next.js",
+    "category": "Web",
+    "display_order": 7
+  },
+  {
+    "name": "React",
+    "category": "Web",
+    "display_order": 8
+  },
+  {
+    "name": "Tailwind CSS",
+    "category": "Web",
+    "display_order": 9
+  },
+  {
+    "name": "Flask",
+    "category": "Web",
+    "display_order": 10
+  },
+  {
+    "name": "Django",
+    "category": "Web",
+    "display_order": 11
+  },
+  {
+    "name": "Gin",
+    "category": "Web",
+    "display_order": 12
+  },
+  {
+    "name": "画像の異常検知",
+    "category": "機械学習・画像処理",
+    "display_order": 13
+  },
+  {
+    "name": "OpenCV",
+    "category": "機械学習・画像処理",
+    "display_order": 14
+  },
+  {
+    "name": "MediaPipe",
+    "category": "機械学習・画像処理",
+    "display_order": 15
+  },
+  {
+    "name": "YOLO",
+    "category": "機械学習・画像処理",
+    "display_order": 16
+  },
+  {
+    "name": "Docker",
+    "category": "インフラ・DB",
+    "display_order": 17
+  },
+  {
+    "name": "Linux",
+    "category": "インフラ・DB",
+    "display_order": 18
+  },
+  {
+    "name": "Proxmox",
+    "category": "インフラ・DB",
+    "display_order": 19
+  },
+  {
+    "name": "Cloudflare Tunnel",
+    "category": "インフラ・DB",
+    "display_order": 20
+  },
+  {
+    "name": "SQLite",
+    "category": "インフラ・DB",
+    "display_order": 21
+  },
+  {
+    "name": "Supabase",
+    "category": "インフラ・DB",
+    "display_order": 22
+  },
+  {
+    "name": "Arduino / M5Stack",
+    "category": "そのほか",
+    "display_order": 23
+  },
+  {
+    "name": "Discord Bot",
+    "category": "そのほか",
+    "display_order": 24
+  },
+  {
+    "name": "Notion API",
+    "category": "そのほか",
+    "display_order": 25
+  },
+  {
+    "name": "Gemini API",
+    "category": "そのほか",
+    "display_order": 26
+  }
 ]
