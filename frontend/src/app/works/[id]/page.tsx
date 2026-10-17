@@ -16,7 +16,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: work.title,
     description,
-    openGraph: { title: work.title, description, type: "article" },
+    openGraph: {
+      type: "article",
+      locale: "ja_JP",
+      siteName: "dice portfolio",
+      url: `/works/${id}`,
+      title: work.title,
+      description,
+    },
+    // 親（layout）の twitter はトップの文言なので、作品ページでは上書きする。画像は twitter-image.tsx から入る
+    twitter: { card: "summary_large_image", creator: "@_dice_ke", title: work.title, description },
   };
 }
 

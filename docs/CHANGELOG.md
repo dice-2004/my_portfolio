@@ -166,3 +166,17 @@
   - dice さんの添削どおり、Kotlin、Bash、React、Tailwind CSS、YOLO、Notion API、Gemini API をスキル一覧から外した（`backend/seeds/skills.json`）。
   - 「Proxmox VE / LXC」を「Proxmox」に、「Arduino / M5Stack」を「M5Stack」にした。空になった分類はない。
   - 作品ページの技術スタックはその作品で使ったものなので、そのまま残している。
+
+---
+
+### [2026-10-17] SEO と共有画像（残りのタスク 6・9・10）
+* **ステータス**: PR 作成済み（dice さんの確認待ち）
+* **作業内容**:
+  - SNS で共有したときの画像（OG 画像）を作った。トップは名前・所属・紹介文、作品ページは受賞歴・作品名・概要を、サイトと同じ配色と CLI パネルのドット絵で 1200×630 の PNG にする（`frontend/src/lib/og.tsx`、各ページの `opengraph-image.tsx` / `twitter-image.tsx`）。作品の画像は作品の文章が変わると自動で変わる。
+  - 日本語フォントは `@fontsource/ibm-plex-sans-jp` の中から、画像に出す文字を含むファイルだけを読む。Google Fonts へは取りに行かない。
+  - 作品ページの X（Twitter）用のタイトル・説明が、トップの文言のままだったのを作品ごとに直した。
+  - `sitemap.xml`（トップと全作品。作品はバックエンドから取り、60 秒ごとに作り直す）と `robots.txt`（`/api/` は検索エンジンに読ませない）を出すようにした（`frontend/src/app/sitemap.ts` / `robots.ts`）。
+  - Next.js 16 で名前が変わったので `middleware.ts` を `proxy.ts` に移した。中身（リクエストのログ）は同じ。
+* **次にやること**:
+  - 本番に出したあと、X の投稿画面や Facebook のシェアデバッガーで画像が出るか確かめる。
+  - Google Search Console を使うなら、`https://portfolio.dice-ke.tech/sitemap.xml` を登録する。

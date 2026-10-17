@@ -1,6 +1,7 @@
+// Next.js 16 で middleware.ts から proxy.ts に名前が変わった。今は全リクエストのログを出すだけ。
 import { NextResponse, type NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const now = new Date();
   const timestamp = now.toISOString().replace(/T/, ' ').replace(/\..+/, '');
   console.log(`[${timestamp}] ${request.method} ${request.nextUrl.pathname}`);
