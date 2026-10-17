@@ -160,6 +160,15 @@
 
 ---
 
+### [2026-10-17] 軽量化と整理（残りのタスク 1〜3）
+* **ステータス**: PR 作成済み（dice さんの確認待ち）
+* **作業内容**:
+  - 約 10MB あったファビコン `dice.svg`（写真を細かいパスでなぞった SVG）を、同じ絵の `favicon.ico`（16/32/48px、約 15KB）、`icon.png`（192px）、`apple-icon.png`（180px、iPhone のホーム画面用）に作り直し、`dice.svg` は消した。
+  - 使っていないファイルを消した: 中身がダミーの毎日バックアップ `.github/workflows/backup.yml`（DB は `backend/seeds/` から作り直せる）、削除済みの管理者機能の話が残る `docs/DATABASE_RECOVERY_SPEC.md` と `backend/scripts/inspect_db.py`、Next.js 初期の SVG 5 つ（`file` `globe` `next` `vercel` `window`）。どれもどこからも参照されていないことを確かめた。
+  - README を今のサイトに合わせて書き直した（CLI パネル、Gemini の RAG チャット、ファイルで管理するコンテンツ、docker compose での起動、本番 `/opt/docker/my_portfolio` での更新方法）。
+
+---
+
 ### [2026-10-17] スキル一覧の添削
 * **ステータス**: PR 作成済み（dice さんの確認待ち）
 * **作業内容**:

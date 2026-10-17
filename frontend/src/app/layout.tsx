@@ -42,7 +42,13 @@ export const metadata: Metadata = {
     creator: "@_dice_ke",
   },
   robots: { index: true, follow: true },
-  icons: { icon: "/dice.svg" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default async function RootLayout({
