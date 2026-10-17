@@ -164,6 +164,15 @@ chown root:1993 /opt/docker/obsidian-export/config.json
 chmod 640 /opt/docker/obsidian-export/config.json
 ```
 
+書き終えたら、JSON として読める形かを確かめる。`OK` と出ればよい。
+
+```bash
+python3 -m json.tool /opt/docker/obsidian-export/config.json >/dev/null && echo OK
+```
+
+エラーになるときは、すぐ下が `}` の行の末尾に `,` が残っていないか（`idDerivationKey` の行を消したときに起きやすい）、全角の `”` `，` が混ざっていないかを見る。
+読めない設定のまま起動すると、ログに `Could not parse configuration!` と出て何もしない（`now started!` とも出るが、動いてはいない）。
+
 #### 5. 起動する
 
 `/opt/docker/obsidian-export/docker-compose.yml` を作る。
