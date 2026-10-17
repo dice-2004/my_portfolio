@@ -71,8 +71,8 @@ func main() {
 	r.GET("/api/chat/status", chat.Status)
 	r.POST("/api/chat", chat.Post)
 
-	// 静的ファイルの配信
-	r.Static("/api/uploads", "./uploads")
+	// 作品の画像・動画（seeds/media/ に置いたファイル）。git pull だけで反映される
+	r.Static("/api/media", "./seeds/media")
 
 	port := os.Getenv("PORT")
 	if port == "" {

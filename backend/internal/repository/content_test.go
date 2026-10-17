@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -134,6 +136,89 @@ func TestRealSeedsLoad(t *testing.T) {
 		var n int
 		if err := DB.QueryRow("SELECT COUNT(*) FROM " + f.table).Scan(&n); err != nil || n == 0 {
 			t.Errorf("%s: %d 件 (err = %v)", f.name, n, err)
+		}
+	}
+}
+
+func TestWorkMediaFields(t *testing.T) {
+	setupContent(t)
+	writeSeed(t, "works_unified.md", `## 1. Alpha (alpha)
+- **GitHub**: (未記載・個人演習)
+- **画像**: alpha/top.png, 画面 2.png, https://example.com/x.jpg
+- **動画**: https://youtu.be/abc
+- **代表作**: はい
+- **ショート概要**: 一つ目
+
+---
+
+## 2. Beta (beta)
+- **GitHub**: https://github.com/example/beta
+- **ショート概要**: 二つ目
+`)
+	SyncContent()
+
+	a, err := GetWorkByID(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"/api/media/alpha/top.png", "/api/media/%E7%94%BB%E9%9D%A2%202.png", "https://example.com/x.jpg"}
+	if strings.Join(a.Images, "|") != strings.Join(want, "|") || a.ImageURL != want[0] {
+		t.Errorf("images = %q, image_url = %q", a.Images, a.ImageURL)
+	}
+	if a.VideoURL != "https://youtu.be/abc" || !a.Featured || a.GithubURL != "" {
+		t.Errorf("alpha = %+v", a)
+	}
+	b, _ := GetWorkByID(2)
+	if len(b.Images) != 0 || b.Images == nil || b.Featured || b.GithubURL != "https://github.com/example/beta" {
+		t.Errorf("beta = %+v", b)
+	}
+}
+
+// 列が足りない古い DB に列を足し、作品ファイルを読み直させる
+func TestAddWorkColumns(t *testing.T) {
+	setupContent(t)
+	SyncContent()
+	for _, c := range []string{"images", "video_url", "featured"} {
+		if _, err := DB.Exec("ALTER TABLE works DROP COLUMN " + c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := addWorkColumns(); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	DB.QueryRow("SELECT COUNT(*) FROM content_meta WHERE file = 'works_unified.md'").Scan(&n)
+	if n != 0 {
+		t.Error("works_unified.md の hash が残っている")
+	}
+	SyncContent()
+	if works, err := GetAllWorks(); err != nil || len(works) != 2 {
+		t.Fatalf("works = %+v, err = %v", works, err)
+	}
+	// 2 回目は何もしない
+	if err := addWorkColumns(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// works_unified.md の「画像」「動画」に書いたファイルが seeds/media/ に本当にあるか（書き間違いを CI で見つけるため）
+func TestRealSeedMediaExists(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "seeds", "works_unified.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range parseUnifiedMD(string(data)) {
+		for _, u := range append(append([]string{}, p.images...), p.videoURL) {
+			if !strings.HasPrefix(u, mediaURLPrefix) {
+				continue
+			}
+			name, err := url.PathUnescape(strings.TrimPrefix(u, mediaURLPrefix))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join("..", "..", "seeds", "media", name)); err != nil {
+				t.Errorf("%s: seeds/media/%s がありません", p.title, name)
+			}
 		}
 	}
 }

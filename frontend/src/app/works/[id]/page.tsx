@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import WorkMedia from "@/components/works/WorkMedia";
 import { getWork, toWorkView } from "@/lib/portfolio";
 
 type Props = { params: Promise<{ id: string }> };
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: work.title,
     description,
-    openGraph: { title: work.title, description, type: "article" },
+    openGraph: { title: work.title, description, type: "article", ...(view.images[0] && { images: [view.images[0]] }) },
   };
 }
 
@@ -42,6 +43,8 @@ export default async function WorkPage({ params }: Props) {
         <h1 className="font-mono text-4xl font-bold leading-tight text-fg sm:text-5xl">{w.title}</h1>
         {w.summary && <p className="max-w-[60ch] text-lg leading-relaxed text-fg">{w.summary}</p>}
       </header>
+
+      <WorkMedia title={w.title} images={w.images} video={w.video_url ?? ""} />
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0">{w.body && <MarkdownRenderer content={w.body} />}</div>
@@ -69,7 +72,7 @@ export default async function WorkPage({ params }: Props) {
               </ul>
             </div>
           )}
-          {w.github_url && (
+          {/^https?:\/\//.test(w.github_url) && (
             <a
               href={w.github_url}
               target="_blank"
