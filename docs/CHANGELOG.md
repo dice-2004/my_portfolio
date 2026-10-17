@@ -157,3 +157,12 @@
   - 上のメニュー（作品・経歴・スキル・連絡先）を押すと、その場所まで一瞬で飛ぶのではなく、なめらかにスクロールするようにした（`globals.css` の `scroll-behavior: smooth`）。
   - OS で「視差効果を減らす」などを有効にしている人には、これまでどおり一瞬で移動する。
   - 作品ページなど別のページへの移動ではスクロールのアニメーションを挟まない（`layout.tsx` の `data-scroll-behavior="smooth"`。Next.js 16 の仕組み）。
+
+---
+
+### [2026-10-17] スキル一覧の添削
+* **ステータス**: PR 作成済み（dice さんの確認待ち）
+* **作業内容**:
+  - dice さんの添削どおり、Kotlin、Bash、React、Tailwind CSS、YOLO、Notion API、Gemini API をスキル一覧から外した（`backend/seeds/skills.json`）。
+  - 「Proxmox VE / LXC」を「Proxmox」に、「Arduino / M5Stack」を「M5Stack」にした。空になった分類はない。
+  - 作品ページの技術スタックはその作品で使ったものなので、そのまま残している。
