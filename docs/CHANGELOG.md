@@ -160,6 +160,15 @@
 
 ---
 
+### [2026-10-17] 軽量化と整理（残りのタスク 1〜3）
+* **ステータス**: PR 作成済み（dice さんの確認待ち）
+* **作業内容**:
+  - 約 10MB あったファビコン `dice.svg`（写真を細かいパスでなぞった SVG）を、同じ絵の `favicon.ico`（16/32/48px、約 15KB）、`icon.png`（192px）、`apple-icon.png`（180px、iPhone のホーム画面用）に作り直し、`dice.svg` は消した。
+  - 使っていないファイルを消した: 中身がダミーの毎日バックアップ `.github/workflows/backup.yml`（DB は `backend/seeds/` から作り直せる）、削除済みの管理者機能の話が残る `docs/DATABASE_RECOVERY_SPEC.md` と `backend/scripts/inspect_db.py`、Next.js 初期の SVG 5 つ（`file` `globe` `next` `vercel` `window`）。どれもどこからも参照されていないことを確かめた。
+  - README を今のサイトに合わせて書き直した（CLI パネル、Gemini の RAG チャット、ファイルで管理するコンテンツ、docker compose での起動、本番 `/opt/docker/my_portfolio` での更新方法）。
+
+---
+
 ### [2026-10-17] スキル一覧の添削
 * **ステータス**: 完了（PR #12 をマージ）
 * **作業内容**:
@@ -171,12 +180,9 @@
 
 ## 残りのタスク（2026-10-17 洗い出し）
 
-話題ごとに別のスレッドと PR で進める（軽量化と整理: 1〜3 / SEO と共有画像: 6・9・10 / 作品の見せ方: 5・7・8 / 本番運用の改善: 11〜13 / CLI 追加機能: 14。4 は dice さんが確認する）。終わったら上に作業ログを足し、ここから消す。
+話題ごとに別のスレッドと PR で進める（SEO と共有画像: 6・9・10 / 作品の見せ方: 5・7・8 / 本番運用の改善: 11〜13 / CLI 追加機能: 14。4 は dice さんが確認する）。終わったら上に作業ログを足し、ここから消す。
 
 ### A. すぐやりたい（不具合・運用の穴）
-1. **ファビコン `dice.svg` が約 10MB**。初回表示でタブのアイコンのために 10MB を読み込む。小さい SVG / PNG に作り直す。
-2. **使っていないファイルの整理**。毎日の DB バックアップ（`.github/workflows/backup.yml`。self-hosted runner 前提で中身はダミー。DB は `backend/seeds/` から作り直せるので不要）、`docs/DATABASE_RECOVERY_SPEC.md` と `backend/scripts/inspect_db.py`（削除済みの users テーブルや管理者鍵の話が残っている）、`frontend/public/` の Next.js 初期の SVG 5 つ。
-3. **README が古い**。ガラスモーフィズム・Framer Motion・Shadcn・公開鍵暗号など今は無いものを紹介していて、AI チャットや CLI パネルの説明が無い。clone の URL も仮のまま。
 4. **ノートだけに書いてある内容を AI チャットに聞く確認**（public-appserver で PR #6 以降の frontend を再デプロイしてから）。
 
 ### B. 就活向けの中身
