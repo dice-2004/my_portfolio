@@ -65,68 +65,73 @@
     "display_order": 13
   },
   {
-    "name": "OpenCV",
+    "name": "Vision Transformer",
     "category": "機械学習・画像処理",
     "display_order": 14
   },
   {
-    "name": "MediaPipe",
+    "name": "OpenCV",
     "category": "機械学習・画像処理",
     "display_order": 15
   },
   {
-    "name": "YOLO",
+    "name": "MediaPipe",
     "category": "機械学習・画像処理",
     "display_order": 16
   },
   {
-    "name": "Docker",
-    "category": "インフラ・DB",
+    "name": "YOLO",
+    "category": "機械学習・画像処理",
     "display_order": 17
   },
   {
-    "name": "Linux",
+    "name": "Docker",
     "category": "インフラ・DB",
     "display_order": 18
   },
   {
-    "name": "Proxmox",
+    "name": "Linux",
     "category": "インフラ・DB",
     "display_order": 19
   },
   {
-    "name": "Cloudflare Tunnel",
+    "name": "Proxmox",
     "category": "インフラ・DB",
     "display_order": 20
   },
   {
-    "name": "SQLite",
+    "name": "Cloudflare Tunnel",
     "category": "インフラ・DB",
     "display_order": 21
   },
   {
-    "name": "Supabase",
+    "name": "SQLite",
     "category": "インフラ・DB",
     "display_order": 22
   },
   {
-    "name": "Arduino / M5Stack",
-    "category": "そのほか",
+    "name": "Supabase",
+    "category": "インフラ・DB",
     "display_order": 23
   },
   {
-    "name": "Discord Bot",
+    "name": "Arduino / M5Stack",
     "category": "そのほか",
     "display_order": 24
   },
   {
-    "name": "Notion API",
+    "name": "Discord Bot",
     "category": "そのほか",
     "display_order": 25
   },
   {
-    "name": "Gemini API",
+    "name": "Notion API",
     "category": "そのほか",
     "display_order": 26
+  },
+  {
+    "name": "Gemini API",
+    "category": "そのほか",
+    "display_order": 27
   }
 ]
