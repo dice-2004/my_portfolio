@@ -15,7 +15,6 @@
   --line: #2a322d;
   --accent: #e9b44c;
   --ok: #7fd49b;
-  --bike: #9fd356; /* CLI のドット絵アイコン（dice のバイクの緑） */
   --panel-w: min(560px, 42vw);
   color-scheme: dark;
 }

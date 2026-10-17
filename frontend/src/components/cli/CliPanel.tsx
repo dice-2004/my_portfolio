@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCli } from "./CliContext";
 import { profile } from "@/content/profile";
 import type { Portfolio } from "@/lib/portfolio";
 import { runCommand, suggest, type Line } from "./commands";
+import { SPRITES } from "./sprites";
 
 const VERSION = "v0.2.0";
 
@@ -94,33 +95,40 @@ function ResizeHandle() {
   );
 }
 
-// ファビコンの写真（緑のバイクと dice）を元にしたドット絵。# が 1 ドット。
-const BIKE = [
-  "......##........",
-  ".....####.......",
-  "......###.......",
-  ".....####....##.",
-  "...########.###.",
-  ".#############..",
-  "..##.......##...",
-  ".####.....####..",
-  "##..##...##..##.",
-  "##..##...##..##.",
-  ".####.....####..",
-];
+// ページを開いたときに 1 回だけ選ぶ。サーバーでは選ばず（-1）、ブラウザで選んだものを使う。
+let pickedSprite = -1;
+const pickSprite = () => {
+  if (pickedSprite < 0) pickedSprite = Math.floor(Math.random() * SPRITES.length);
+  return pickedSprite;
+};
+const noSubscribe = () => () => {};
 
-function DiceMark() {
+/** 左上のドット絵。animate の間はフレームを順に切り替える。 */
+function PixelMark({ animate }: { animate: boolean }) {
+  const index = useSyncExternalStore(noSubscribe, pickSprite, () => -1);
+  const [tick, setTick] = useState(0);
+  const sprite = index >= 0 ? SPRITES[index] : null;
+  const frameCount = sprite?.frames.length ?? 1;
+
+  useEffect(() => {
+    if (!animate || frameCount < 2) return;
+    const t = setInterval(() => setTick((n) => n + 1), 140);
+    return () => clearInterval(t);
+  }, [animate, frameCount]);
+
+  // 横 96px・縦 52px に収まる範囲で、1 ドットをできるだけ大きくする
+  const w = sprite?.frames[0][0].length ?? 16;
+  const h = sprite?.frames[0].length ?? 11;
+  const dot = Math.max(2, Math.floor(Math.min(96 / w, 52 / h)));
+  const frame = sprite ? sprite.frames[animate ? tick % frameCount : 0] : [];
+
   return (
-    <svg
-      aria-hidden
-      viewBox={`0 0 ${BIKE[0].length} ${BIKE.length}`}
-      width={BIKE[0].length * 4}
-      height={BIKE.length * 4}
-      shapeRendering="crispEdges"
-      fill="var(--bike)"
-      className="mt-1 shrink-0"
-    >
-      {BIKE.flatMap((row, y) => [...row].map((c, x) => (c === "#" ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} /> : null)))}
+    <svg aria-hidden viewBox={`0 0 ${w} ${h}`} width={w * dot} height={h * dot} shapeRendering="crispEdges" className="mt-1 shrink-0">
+      {frame.flatMap((row, y) =>
+        [...row].map((c, x) =>
+          sprite && sprite.palette[c] ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={sprite.palette[c]} /> : null,
+        ),
+      )}
     </svg>
   );
 }
@@ -299,7 +307,7 @@ export default function CliPanel({ portfolio }: { portfolio: Portfolio }) {
 
       <div ref={logRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" aria-live="polite">
         <div className="flex items-start gap-3 leading-relaxed">
-          <DiceMark />
+          <PixelMark animate={busy} />
           <p>
             <span className="font-bold">dice-cli</span> <span className="text-dim">{VERSION}</span>
             <br />
