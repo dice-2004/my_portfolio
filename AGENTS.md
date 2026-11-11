@@ -1,54 +1,88 @@
-# AGENTS.md
+# my_portfolio
 
-AIエージェント（Claude Code など）と人間の開発者向けの、このリポジトリの作業ガイドです。
-
-## 構成
-
-| パス | 内容 |
-|------|------|
-| `frontend/` | Next.js 16 (App Router) + React 19 + Tailwind CSS 4。`frontend/AGENTS.md` も読むこと（Next.js 16 の注意点） |
-| `backend/` | Go (Gin) の読み取り専用 REST API。SQLite (`modernc.org/sqlite`, CGO 不要) |
-| `backend/migrations/` | 起動時に実行される SQL |
-| `backend/seeds/` | 作品・スキル・経歴・自己紹介の正本。起動時と 30 秒ごとに中身を確かめ、変わったファイルだけ DB に反映する（`internal/repository/content.go`） |
-| `backend/internal/ai/` | AI チャット。Gemini API クライアント、資料のチャンク分割、埋め込みの保存と検索（SQLite の `chunks`）、回答の生成 |
-| `backend/seeds/knowledge/` | （任意）サイトには出さないが AI チャットに答えさせたい補足の Markdown |
-| `scripts/sync-obsidian.sh` | private-appserver の Vault から、obsidianignore で除外されていないノートだけを public-appserver へ rsync する（手順は `docs/obsidian-sync.md`） |
-| `docker/`, `docker-compose.yml` | 本番（N100 + Cloudflare Tunnel）と同じ構成のコンテナ |
-| `docs/archive/` | 初期の設計書。現在の方針とは異なる部分があるので参考程度に |
+dice のポートフォリオサイト。作品・経歴・スキルのページと、サイトの内容に答える CLI 風の AI チャットパネルを、就職活動の採用担当者などの訪問者に見せる。自宅の N100 Mini PC（public-appserver）で動かし、Cloudflare Tunnel で公開している。
 
 ## コマンド
+- フロントエンド（`frontend/` で実行）
+  - セットアップ：`npm ci`
+  - Lint：`npm run lint`（error は CI で落ちる）
+  - 型チェック：`npx tsc --noEmit`
+  - ビルド：`npm run build`（バックエンドが無くても通る）
+  - テストはまだ無い。
+- バックエンド（`backend/` で実行）
+  - 静的チェック：`go vet ./...`
+  - ビルド：`go build ./...`
+  - テスト：`go test ./...`（単体で回す場合：`go test ./internal/ai/`）
+- 全体をコンテナで起動：`docker compose up -d`（frontend: http://localhost:3031 / backend: http://localhost:8031）
+- 同じチェックが `.github/workflows/ci.yml` で PR ごとに走る。
 
-```bash
-# フロントエンド
-cd frontend
-npm ci
-npm run lint          # ESLint（error は CI で落ちる）
-npx tsc --noEmit      # 型チェック
-npm run build         # 本番ビルド（バックエンドが無くてもビルドは通る）
-
-# バックエンド
-cd backend
-go vet ./...
-go build ./...
-go test ./...
-
-# 全体をコンテナで起動
-docker compose up -d   # frontend: http://localhost:3031 / backend: http://localhost:8031
-```
-
-push 前に上のチェックを通すこと。同じ内容が `.github/workflows/ci.yml` で PR ごとに走ります。
+## 構成
+- `frontend/`：Next.js 16（App Router）、React 19、Tailwind CSS 4。ここを触る前に `frontend/AGENTS.md` を読む（Next.js 16 は学習済みの知識と違う点があり、`node_modules/next/dist/docs/` の該当ガイドを読んでから書く）。
+- `backend/`：Go（Gin）の読み取り専用 REST API。SQLite（`modernc.org/sqlite`、CGO 不要）。
+- `backend/migrations/`：起動時に実行される SQL。
+- `backend/seeds/`：作品・スキル・経歴・自己紹介の正本。起動時と 30 秒ごとに中身を確かめ、変わったファイルだけ DB に反映する（`backend/internal/repository/content.go`）。
+- `backend/seeds/knowledge/`：（任意。今は無い）サイトには出さないが AI チャットに答えさせたい補足の Markdown。
+- `backend/internal/ai/`：AI チャット。Gemini API クライアント、資料のチャンク分割、埋め込みの保存と検索（SQLite の `chunks`）、回答の生成。
+- `scripts/sync-obsidian.sh`：private-appserver の Vault から、obsidianignore で除外されていないノートだけを public-appserver へ rsync する。手順は `docs/obsidian-sync.md`。Obsidian 連携を触る前に読む。
+- `docker/`、`docker-compose.yml`：本番と同じ構成のコンテナ。
+- `docs/CHANGELOG.md`：作業ログと「残りのタスク」。作業開始時に読む。
+- `docs/archive/`、`docs/DATABASE_RECOVERY_SPEC.md`、`backend/scripts/inspect_db.py`：古い内容（削除済みの認証・管理者鍵の話など）が残っている。今の方針と違うので、根拠にしない。
+- `.agents/skills/`：外部から入れたスキル（`skills-lock.json` で管理）。
 
 ## 方針（2026-10 時点の決定事項）
-
-- **管理画面と認証は持たない。** コンテンツはファイルで管理し、Obsidian や git push で更新する。書き込み系の API を追加しないこと。
-- **AI チャット**は Gemini API の無料枠のみを使う（回答: Gemini Flash Lite、埋め込み: Gemini Embedding）。API キーはバックエンドの環境変数だけで持ち、フロントに出さない。
-- Obsidian のノートは、Vault 内の `obsidianignore`（`.md` 付きでも可。.gitignore と同じく置いたフォルダから数える）に書かれたパスを除外して取り込む（`.env` の `OBSIDIAN_VAULT_DIR`）。除外リストが読めないときは Vault を読まない。
-- 無料枠を守るため、埋め込みはコンテンツが変わったときだけ少しずつ作る。質問 1 回で使うのは埋め込み 1 回と回答 1 回。回答は 1 日 400 回（`CHAT_DAILY_LIMIT`）、IP ごとに 1 分 5 回・1 日 30 回まで。
+- 管理画面と認証は持たない。コンテンツはファイルで管理し、Obsidian や git push で更新する。書き込み系の API を追加しない。
+- AI チャットは Gemini API の無料枠だけを使う（回答：Gemini Flash Lite、埋め込み：Gemini Embedding）。有料の API や別のサービスに変えない。
+- 無料枠を守るため、埋め込みはコンテンツが変わったときだけ少しずつ作る。質問 1 回で使うのは埋め込み 1 回と回答 1 回。回答は 1 日 400 回（`CHAT_DAILY_LIMIT`）、IP ごとに 1 分 5 回・1 日 30 回まで。この上限を緩める変更は確認してから行う。
+- Obsidian のノートは、Vault 内の `obsidianignore`（`.md` 付きでも可。.gitignore と同じく置いたフォルダから数える）に書かれたパスを除外して取り込む（`.env` の `OBSIDIAN_VAULT_DIR`）。除外リストが読めないときは Vault を読まない。この安全側の動きを変えない。
 - デザインは「読みやすい作品・経歴ページ + 右からスライドして出る CLI 風チャットパネル」。
-- `main` は常に本番デプロイできる状態を保つ。変更はブランチと PR で行う。
+- `main` は常に本番に出せる状態を保つ。
 
-## 書き方
+## 進め方
+- 回答・コメント・コミットメッセージ・PR の説明は日本語で書く。
+- 確認してから行う：外部パッケージの追加、API のエンドポイントやレスポンス形式の変更、DB スキーマ（`backend/migrations/`）の変更、`docker/`・`docker-compose.yml`・`.github/workflows/` の変更、デザインの方向を変える変更、上の「方針」に反する変更。確認では、どのファイルのどこを、なぜ、どう変えるかを説明する。
+- 確認せずに行ってよい：依頼された範囲の実装、既存コードのバグ修正、テストの追加、コメント・命名の修正。自分の変更が原因で検証中に見つかったバグの修正も含む。
+- 同じエラーの修正を 3 回試して直らなければ、止めて、試した内容・エラーログ・現状を報告する。
+- 依頼の範囲外のファイルは変更しない（「記録」の節に挙げたファイルの更新は除く）。気づいた改善点は提案として報告する。
+- 仕様や外部 API（Gemini API、Next.js 16）の挙動に確信がないときは、断定せずにそう書いて確認を求める。
+- 仕様の不明点は、取り消せる作業なら仮定を置いて進め、置いた仮定を報告する。
+- 途中でユーザーに確認できない実行（クラウドのタスクなど）では、確認が必要な操作は行わず、報告か PR の説明に「提案・未実施」として書く。試行の上限に達したときは、そこまでの変更をブランチに残して状況を報告する。
 
+## 品質と検証
+- 完了を報告する前に、変更した側（frontend・backend）の上のチェックをすべて通す。通らないまま完了としない。スキップ手段（`--no-verify`、`eslint-disable` の追加、テストの `t.Skip`）は使わない。
+- 変更前から失敗していたものと、環境の都合で実行できないものは、自分の変更による失敗と分けて「既存の失敗」「未確認」として報告する。
+- 見た目を変えたら、画面を実際に表示して確かめる。PR を作るときは説明にスクリーンショットを付け、作らないときは確かめた画面と結果を報告に書く。表示できなかったら「未確認」と書く。
 - UI の文言は日本語。飾りだけの英語ラベルや、意味のない 8〜10px の文字は増やさない。
-- 文字色は背景とのコントラスト比 4.5:1 以上。
-- 秘密情報（API キー、トークン、秘密鍵）をコミットしない。`.env*` は gitignore 済み。
+- 文字色は背景とのコントラスト比 4.5:1 以上にする。
+- `backend/seeds/` の経歴・作品・スキルは dice 本人の事実。依頼された内容だけを書き、実績・期間・技術名・数値を補ったり言い換えで盛ったりしない。分からない項目は空のままにして質問する。
+- Gemini の API キーはバックエンドの環境変数だけで持つ。フロントエンドのコードや `NEXT_PUBLIC_` で始まる変数に出さない。
+- バックエンドのコードを変えたら、対応するテスト（`*_test.go`）を足すか直す。
+
+## Git
+- 変更は作業ブランチで行う。作業ブランチへのコミットは行ってよい。push と PR の作成は、依頼に含まれるときだけ行い、それ以外は確認する。`main` への直接 push、force push、履歴の書き換えは行わない。
+- クラウドの実行で作業ブランチが指定されているときは、そのブランチへの push は依頼に含まれるものとして行う（コミットだけでは変更が残らないため）。PR の作成は、依頼に含まれるときだけ行う。
+- 話題ごとにブランチと PR を分ける。
+
+## 守るべきもの
+- このファイル（AGENTS.md）と CLAUDE.md は、ユーザーの明示的な指示なしに編集しない。改善案は提案する。
+- 変更しない：`frontend/AGENTS.md`（Next.js が生成した注意書き）、`.agents/skills/` の中身（`skills-lock.json` とずれるため）、`docs/archive/`。
+- API キー・トークン・パスワード・秘密鍵を、コード・コミット・ログ・チャットに書かない。機密情報はリポジトリ直下の `.env`（git 管理外。雛形は `.env.example`）から環境変数として読む。
+- Obsidian のノートの本文や Vault のパスを、コード・テスト・コミット・ログに写さない（公開リポジトリのため）。
+- ファイルの削除と、動いているコンテナの停止・再起動（`docker compose down` など）は、内容を説明して承認を得てから行う。
+- 本番（public-appserver）と private-appserver への操作（ssh、デプロイ、`scripts/sync-obsidian.sh` の実行）は行わない。必要なときは手順を書いてユーザーに依頼する。
+
+## 記録
+- 作業開始時に `docs/CHANGELOG.md` の「残りのタスク」と直近の作業ログを読む。
+- 作業が終わったら、`docs/CHANGELOG.md` の「残りのタスク」の上に、既存と同じ形（`### [YYYY-MM-DD] 件名`、ステータス、作業内容）で作業ログを足す。終えたタスクは「残りのタスク」から消し、新しく見つけたタスクは足す。
+- 記録の更新は、その作業と同じコミット・PR に含める。push しないときは、更新した内容を報告にも書く。
+
+## 報告
+完了時は次の順で報告する。
+1. 変更内容
+2. 理由・意図
+3. 検証方法と結果（実施していなければ「未確認」）
+4. 残課題・提案
+
+## 指示の優先順位
+- このファイルと会話中の指示が食い違うときは、会話中の直近の明示的な指示を優先する。ただし「Git」「守るべきもの」は、ユーザーがそのルールの一時解除を明示したときだけ外す。
+- ユーザーの全体設定（個人設定など）とこのファイルが食い違うときは、このリポジトリについてはこのファイルを優先する。
+- スキルの指示とこのファイルが食い違うときは、このファイルを優先する。
